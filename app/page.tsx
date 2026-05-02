@@ -60,7 +60,10 @@ export default function HomePage() {
 
   const handleForgeComplete = useCallback((mate: Mate) => {
     mutate("/api/squad")
-    setMcpSetupMate(mate)
+    // Defer opening the second modal until ForgeFlow's close animation
+    // (~200ms) finishes, otherwise the two dialogs stack briefly and the
+    // closing dialog's footer leaks behind the new one.
+    setTimeout(() => setMcpSetupMate(mate), 260)
   }, [])
 
   const handleSeedStarter = useCallback(async () => {
