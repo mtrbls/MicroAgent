@@ -57,7 +57,9 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="relative flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent
+        className="flex flex-col gap-0 overflow-hidden p-0 top-4 translate-y-0 max-h-[calc(100dvh-2rem)] sm:top-1/2 sm:-translate-y-1/2 sm:max-h-[85dvh] sm:max-w-lg"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
