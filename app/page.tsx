@@ -18,6 +18,45 @@ interface SquadData {
   mates: Mate[]
 }
 
+const SUGGESTIONS: { emoji: string; label: string; prompt: string }[] = [
+  {
+    emoji: "📩",
+    label: "Sweep my inbox",
+    prompt:
+      "Read my Gmail inbox from the last 24h. Surface 3-5 important emails (real people awaiting reply or with deadlines). For the rest, label them by category (Newsletter, Promo, Notification) — preview the count and ask before applying.",
+  },
+  {
+    emoji: "📅",
+    label: "Brief today's calendar",
+    prompt:
+      "Brief me on today's Google Calendar — every event from now through end of day in chronological order with attendees and a one-line prep note. Then list my free 30+ minute blocks.",
+  },
+  {
+    emoji: "✍️",
+    label: "Draft pending replies",
+    prompt:
+      "Find emails sent to me in the last 7 days that I haven't replied to and aren't from automated senders. Draft a short reply for each, matching the inferred tone. Don't auto-send.",
+  },
+  {
+    emoji: "🐛",
+    label: "Triage Linear tickets",
+    prompt:
+      "Read newly-created Linear tickets in my workspace. For each, suggest a priority (P0-P3) and an owner based on team labels. Output as a list — don't update tickets unless I confirm.",
+  },
+  {
+    emoji: "📊",
+    label: "Standup from yesterday",
+    prompt:
+      "Pull yesterday's commits from my GitHub repos and draft a Slack standup message: what shipped, what's in flight, any blockers. Don't auto-post.",
+  },
+  {
+    emoji: "📝",
+    label: "Capture to Notion",
+    prompt:
+      "When invoked with a note, append a timestamped entry to my Notion 'Journal' page. Take the text verbatim, prepend the current date and time, append as a new bullet.",
+  },
+]
+
 export default function HomePage() {
   const { data, isLoading } = useSWR<SquadData>("/api/squad", fetcher, {
     refreshInterval: 5000,
@@ -27,6 +66,7 @@ export default function HomePage() {
   const [mateDetailOpen, setMateDetailOpen] = useState(false)
   const [launchMate, setLaunchMate] = useState<Mate | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [createInitial, setCreateInitial] = useState<string>("")
   const [mcpSetupMate, setMcpSetupMate] = useState<Mate | null>(null)
   const [seeding, setSeeding] = useState(false)
   const autoSeededRef = useRef(false)
@@ -144,9 +184,37 @@ export default function HomePage() {
 
       <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-6xl md:px-6">
         {mates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
-            <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Setting up your starter pack...</p>
+          <div className="rounded-xl border-2 border-dashed border-foreground/40 p-6 sm:p-8">
+            {!autoSeededRef.current && (
+              <div className="mb-6 flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+                Setting up the starter pack...
+              </div>
+            )}
+            <h2 className="font-display text-base tracking-tight text-foreground">
+              CREATE AN AGENT
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Pick a starter, or describe your own:
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s.label}
+                  onClick={() => {
+                    setCreateInitial(s.prompt)
+                    setCreateOpen(true)
+                  }}
+                  className="group relative border-2 border-foreground bg-card p-4 text-left transition-transform shadow-[4px_4px_0_0_var(--color-foreground)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_var(--color-foreground)]"
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <span>{s.emoji}</span>
+                    <span>{s.label}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{s.prompt}</p>
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <>
@@ -199,8 +267,12 @@ export default function HomePage() {
 
       <CreateAgent
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(o) => {
+          setCreateOpen(o)
+          if (!o) setCreateInitial("")
+        }}
         onComplete={handleCreateComplete}
+        initialDescription={createInitial}
       />
 
       <McpSetupModal

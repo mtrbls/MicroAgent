@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,8 @@ interface CreateAgentProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onComplete?: (mate: Mate) => void
+  /** Pre-fill the description box (used by the empty-state suggestion chips). */
+  initialDescription?: string
 }
 
 type StepKey = "name" | "avatar" | "voice" | "tools" | "prompt" | "save"
@@ -35,9 +37,19 @@ interface CreateAgentEvent {
   mate?: Mate
 }
 
-export function CreateAgent({ open, onOpenChange, onComplete }: CreateAgentProps) {
+export function CreateAgent({
+  open,
+  onOpenChange,
+  onComplete,
+  initialDescription,
+}: CreateAgentProps) {
   const router = useRouter()
-  const [description, setDescription] = useState("")
+  const [description, setDescription] = useState(initialDescription ?? "")
+
+  // When the dialog opens with a new initialDescription, sync it in.
+  useEffect(() => {
+    if (open && initialDescription) setDescription(initialDescription)
+  }, [open, initialDescription])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<Record<StepKey, { state: StepState; value?: string }>>({
