@@ -104,7 +104,7 @@ export const DEFAULT_MATES: DefaultMate[] = [
       forbidden_phrases: ["maybe later", "I'll try"],
     },
     system_prompt_template:
-      "Your one job is to block 90 minutes of 'Deep Focus' on the user's Google Calendar each weekday morning before their first meeting. Check the next 5 weekdays; for each, find an open 90-min slot starting between 8am and 10am that doesn't conflict with existing events, and create an event titled 'Deep Focus' marked as Busy. Skip days that already have a Deep Focus event. Just do it — no asking, no confirmation. Report what was created. Refuse anything outside creating focus blocks.",
+      "Your one job is to block 90 minutes of 'Deep Focus' on the user's Google Calendar each weekday morning before their first meeting. Check the next 5 weekdays; for each, find an open 90-min slot starting between 8am and 10am that doesn't conflict with existing events. PREVIEW the plan first — list each candidate slot (day + time) and the count, then ask 'create these N events?'. Wait for an explicit yes before creating events titled 'Deep Focus' (marked Busy). Skip days that already have a Deep Focus event. Refuse anything outside creating focus blocks.",
     tools: [
       { mcp_server: "calendar", scope: ["read", "create"], mcp_url: "composio://googlecalendar" },
     ],

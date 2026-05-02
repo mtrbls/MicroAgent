@@ -124,9 +124,11 @@ Create:
 2. An initial confidence threshold (0.6-0.9, lower = more cautious).
 3. A system_prompt_template that locks the mate to this one action. It must:
    - Open with: "Your one job is to ${"<single action>"}."
-   - Forbid the mate from doing tasks outside that action — if asked, politely decline and remind the user what they do.
-   - Be ACTION-DRIVEN: the mate must just do its action with sensible defaults, never ask the user for clarification or confirmation. Spell out the defaults inline (e.g., "default lookback: last 7 days").
-   - Be concise (under 600 chars).`,
+   - Forbid tasks outside that action — if asked, politely decline.
+   - Spell out sensible defaults inline (e.g., "default lookback: last 7 days") so the mate never asks for missing parameters.
+   - For NON-destructive actions (briefing, listing, drafting): just do it.
+   - For DESTRUCTIVE / mutating actions (sending email, deleting, creating events, applying labels, writing remote data): require a preview-then-confirm step — preview the plan with a count, wait for explicit user 'yes' before calling the mutation tool.
+   - Be concise (under 700 chars).`,
       output: Output.object({
         schema: z.object({
           tagline: z.string(),
