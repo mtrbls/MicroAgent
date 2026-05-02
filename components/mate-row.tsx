@@ -3,7 +3,6 @@
 import { useRef, useState } from "react"
 import { useSwipeable } from "react-swipeable"
 import type { Mate } from "@/lib/types"
-import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
 import { Play, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -74,18 +73,22 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
         type="button"
         {...handlers}
         onClick={handleClick}
-        className="relative flex w-full items-center gap-4 overflow-hidden bg-card p-4 text-left transition-transform"
+        className="relative flex w-full items-center gap-4 overflow-hidden bg-card p-4 pl-5 text-left transition-transform"
         style={{
           transform: `translateX(${delta}px)`,
           transition: delta === 0 ? "transform 220ms ease-out" : undefined,
         }}
       >
+        <span
+          aria-hidden
+          className="absolute inset-y-3 left-0 w-1 rounded-r-full"
+          style={{ background: mate.color }}
+        />
         <div
           aria-hidden
           className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
           style={{ background: mate.color }}
         />
-        <MateAvatar name={mate.name} color={mate.color} size="md" />
         <div className="relative z-10 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate font-semibold tracking-tight text-foreground">

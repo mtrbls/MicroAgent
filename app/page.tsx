@@ -97,8 +97,9 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b border-border/30 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-semibold tracking-tight text-foreground">
-              Mates
+            <span className="text-2xl tracking-tight">
+              <span className="font-semibold text-foreground">quick</span>
+              <span className="font-light text-muted-foreground">agent</span>
             </span>
             {mates.length > 0 && (
               <span className="text-xs tabular-nums text-muted-foreground">

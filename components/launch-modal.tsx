@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import {
@@ -8,12 +8,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { MateAvatar } from "./avatar"
 import { MarkdownMessage } from "./markdown-message"
-import { Loader2 } from "lucide-react"
+import { Loader2, Send } from "lucide-react"
 import type { Mate } from "@/lib/types"
 
 interface LaunchModalProps {
@@ -25,6 +25,7 @@ interface LaunchModalProps {
 export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
   const fired = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [input, setInput] = useState("")
 
   const { messages, sendMessage, status } = useChat({
     id: `${mate.id}-launch`,
@@ -44,25 +45,19 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
     }
   }, [messages])
 
-  const assistantText =
-    messages
-      .filter((m) => m.role === "assistant")
-      .map(
-        (m) =>
-          m.parts
-            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-            .map((p) => p.text)
-            .join("\n\n") || ""
-      )
-      .join("\n\n") || ""
+  const isStarting =
+    (status === "submitted" || status === "streaming") && messages.length <= 1
 
-  const isStarting = status === "submitted" && !assistantText
-  const isStreaming = status === "streaming"
-  const isDone = status === "ready" && messages.length > 0
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || status === "streaming" || status === "submitted") return
+    sendMessage({ text: input })
+    setInput("")
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="relative max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent className="relative flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
         <div
           aria-hidden
           className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
@@ -86,43 +81,84 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
         <div
           ref={scrollRef}
-          className="relative mx-6 mt-4 max-h-[50vh] min-h-[140px] overflow-y-auto rounded-xl border border-border/50 bg-secondary/40 p-4"
+          className="relative mx-6 mt-4 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/50 bg-secondary/40 p-4"
         >
-          {isStarting ? (
+          {isStarting && messages.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Launching {mate.name}...
             </div>
-          ) : assistantText ? (
-            <MarkdownMessage>{assistantText}</MarkdownMessage>
           ) : (
-            <p className="text-sm text-muted-foreground">Waiting for response...</p>
+            messages
+              // Hide the auto "Run your action now." trigger so the user only
+              // sees the back-and-forth they explicitly initiated.
+              .filter(
+                (m, i) =>
+                  !(
+                    i === 0 &&
+                    m.role === "user" &&
+                    m.parts?.some(
+                      (p) => p.type === "text" && p.text === "Run your action now."
+                    )
+                  )
+              )
+              .map((msg) => {
+                const text =
+                  msg.parts
+                    ?.filter(
+                      (p): p is { type: "text"; text: string } => p.type === "text"
+                    )
+                    .map((p) => p.text)
+                    .join("\n\n") || ""
+                if (!text) return null
+                return (
+                  <div
+                    key={msg.id}
+                    className={
+                      msg.role === "user"
+                        ? "ml-8 rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground"
+                        : "mr-8 rounded-xl bg-card px-3 py-2 text-sm"
+                    }
+                  >
+                    {msg.role === "assistant" ? (
+                      <MarkdownMessage>{text}</MarkdownMessage>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{text}</p>
+                    )}
+                  </div>
+                )
+              })
+          )}
+          {(status === "submitted" ||
+            (status === "streaming" &&
+              messages[messages.length - 1]?.role !== "assistant")) && (
+            <div className="mr-8 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+              Working
+            </div>
           )}
         </div>
 
-        <DialogFooter className="relative mt-4 border-t border-border/30 bg-background/40 px-6 py-4">
-          <div className="flex w-full items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">
-              {isStreaming ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                  Working
-                </span>
-              ) : isDone ? (
-                "Done"
-              ) : (
-                " "
-              )}
-            </span>
-            <Button
-              onClick={() => onOpenChange(false)}
-              variant={isStreaming ? "outline" : "default"}
-              className="rounded-full"
-            >
-              {isDone || !isStreaming ? "Close" : "Stop"}
-            </Button>
-          </div>
-        </DialogFooter>
+        <form
+          onSubmit={handleSubmit}
+          className="relative mt-4 flex items-center gap-2 border-t border-border/30 bg-background/60 px-6 py-4"
+        >
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Reply to ${mate.name}...`}
+            className="flex-1 rounded-full"
+            disabled={status === "streaming" || status === "submitted"}
+          />
+          <Button
+            type="submit"
+            size="icon"
+            className="rounded-full"
+            disabled={!input.trim() || status === "streaming" || status === "submitted"}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   )
