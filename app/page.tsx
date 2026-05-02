@@ -27,6 +27,7 @@ export default function HomePage() {
   const [trainerOpen, setTrainerOpen] = useState(false)
   const [forgeOpen, setForgeOpen] = useState(false)
   const [forgeDescription, setForgeDescription] = useState("")
+  const [seeding, setSeeding] = useState(false)
 
   const handleMateOpen = useCallback((mate: Mate) => {
     setSelectedMate(mate)
@@ -53,6 +54,16 @@ export default function HomePage() {
   const handleForgeRequested = useCallback((description: string) => {
     setForgeDescription(description)
     setForgeOpen(true)
+  }, [])
+
+  const handleSeedStarter = useCallback(async () => {
+    setSeeding(true)
+    try {
+      await fetch("/api/mates/seed", { method: "POST" })
+      mutate("/api/squad")
+    } finally {
+      setSeeding(false)
+    }
   }, [])
 
   if (isLoading) {
@@ -88,11 +99,20 @@ export default function HomePage() {
 
       <div className="mx-auto max-w-2xl px-4 py-6">
         {mates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
             <p className="text-muted-foreground">No mates yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/70">
-              Tap Forge to create your first one
+            <p className="mt-1 mb-5 text-sm text-muted-foreground/70">
+              Add the starter pack, or forge your own.
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button onClick={handleSeedStarter} disabled={seeding}>
+                {seeding ? "Adding..." : "Add starter pack"}
+              </Button>
+              <Button variant="outline" onClick={() => setForgeOpen(true)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Forge
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
