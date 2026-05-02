@@ -16,6 +16,47 @@ interface ForgeFlowProps {
   onComplete?: (mate: Mate) => void
 }
 
+const EXAMPLES: { label: string; description: string }[] = [
+  {
+    label: "🧹 Delete promo emails",
+    description: "Sweep my Gmail inbox and delete promotional emails older than 7 days.",
+  },
+  {
+    label: "🧾 Label invoices",
+    description: "Find invoice and receipt emails in Gmail and apply the 'Invoices' label.",
+  },
+  {
+    label: "📨 Auto-reply to recruiters",
+    description:
+      "Detect recruiter emails in Gmail and send a polite, standard 'not currently looking' reply.",
+  },
+  {
+    label: "🎯 Block focus time",
+    description:
+      "Each weekday morning, block 90 min of 'Deep Focus' on my Google Calendar before the first meeting.",
+  },
+  {
+    label: "🗓️ Find a meeting slot",
+    description:
+      "When asked, find a free 30-min slot on my calendar within the next 5 business days.",
+  },
+  {
+    label: "🐛 Triage GitHub issues",
+    description:
+      "Read new issues on a given GitHub repo and suggest labels (bug / feature / question).",
+  },
+  {
+    label: "📰 Daily news digest",
+    description:
+      "When asked for 'today's digest', search the web for top headlines on my saved topics and summarize.",
+  },
+  {
+    label: "📝 Capture journal note",
+    description:
+      "Append a timestamped entry I dictate to my Notion 'Journal' page.",
+  },
+]
+
 export function ForgeFlow({ open, onOpenChange, initialDescription = "", onComplete }: ForgeFlowProps) {
   const [description, setDescription] = useState(initialDescription)
   const [loading, setLoading] = useState(false)
@@ -79,18 +120,36 @@ export function ForgeFlow({ open, onOpenChange, initialDescription = "", onCompl
           <div className="space-y-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">
-                Describe your ideal mate
+                Describe one action your mate should do
               </label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g., An assistant that manages my GitHub notifications and summarizes important PRs..."
+                placeholder="e.g., Delete promotional emails older than 7 days from my Gmail inbox."
                 rows={4}
                 className="resize-none"
               />
               <p className="mt-2 text-xs text-muted-foreground">
-                Be specific about what tasks they should handle and how they should communicate
+                One mate, one action. Keep it specific and repeatable.
               </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Or pick an example
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex.label}
+                    type="button"
+                    onClick={() => setDescription(ex.description)}
+                    className="rounded-full border border-border bg-secondary/40 px-3 py-1 text-xs text-foreground/80 transition-colors hover:bg-secondary"
+                  >
+                    {ex.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {error && (
