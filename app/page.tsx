@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import useSWR, { mutate } from "swr"
 import type { Mate } from "@/lib/types"
 import { MateRow } from "@/components/mate-row"
@@ -30,6 +30,19 @@ export default function HomePage() {
   const [forgeOpen, setForgeOpen] = useState(false)
   const [forgeDescription, setForgeDescription] = useState("")
   const [seeding, setSeeding] = useState(false)
+  const autoSeededRef = useRef(false)
+
+  // Always show the default pack: on first mount, sync the starter pack so
+  // defaults are present in the list (and refreshed if their content changed).
+  useEffect(() => {
+    if (autoSeededRef.current) return
+    autoSeededRef.current = true
+    fetch("/api/mates/seed", { method: "POST" })
+      .then(() => mutate("/api/squad"))
+      .catch(() => {
+        // Manual refresh button still available in the header on failure.
+      })
+  }, [])
 
   const handleMateOpen = useCallback((mate: Mate) => {
     setSelectedMate(mate)
@@ -109,19 +122,8 @@ export default function HomePage() {
       <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-6xl md:px-6">
         {mates.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
-            <p className="text-muted-foreground">No mates yet</p>
-            <p className="mt-1 mb-5 text-sm text-muted-foreground/70">
-              Add the starter pack, or forge your own.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button onClick={handleSeedStarter} disabled={seeding}>
-                {seeding ? "Adding..." : "Add starter pack"}
-              </Button>
-              <Button variant="outline" onClick={() => setForgeOpen(true)}>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Forge
-              </Button>
-            </div>
+            <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">Setting up your starter pack...</p>
           </div>
         ) : (
           <>
