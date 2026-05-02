@@ -94,25 +94,44 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
-          <span className="text-xl font-bold text-foreground">Mates</span>
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-40 border-b border-border/30 bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-semibold tracking-tight text-foreground">
+              Mates
+            </span>
+            {mates.length > 0 && (
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {mates.length}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
               size="icon"
               title="Refresh starter pack"
               onClick={handleSeedStarter}
               disabled={seeding}
+              className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setForgeOpen(true)}>
-              <Sparkles className="mr-2 h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setForgeOpen(true)}
+              className="rounded-full"
+            >
+              <Sparkles className="mr-1.5 h-4 w-4" />
               Forge
             </Button>
-            <Button size="sm" onClick={() => setTrainerOpen(true)}>
-              <MessageSquare className="mr-2 h-4 w-4" />
+            <Button
+              size="sm"
+              onClick={() => setTrainerOpen(true)}
+              className="rounded-full"
+            >
+              <MessageSquare className="mr-1.5 h-4 w-4" />
               Trainer
             </Button>
           </div>

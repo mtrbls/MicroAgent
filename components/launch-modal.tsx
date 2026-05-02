@@ -62,20 +62,31 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-start gap-3 text-left">
-            <MateAvatar name={mate.name} color={mate.color} size="md" />
-            <div className="flex-1">
-              <DialogTitle>{mate.name}</DialogTitle>
-              <p className="text-sm text-muted-foreground">{mate.tagline}</p>
+      <DialogContent className="relative max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-30 blur-3xl"
+          style={{ background: mate.color }}
+        />
+
+        <DialogHeader className="relative px-6 pt-6">
+          <div className="flex items-start gap-4 text-left">
+            <MateAvatar name={mate.name} color={mate.color} size="lg" />
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                {mate.name}
+              </DialogTitle>
+              <p className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80">
+                {mate.archetype}
+              </p>
+              <p className="mt-1.5 text-sm text-foreground/80">{mate.tagline}</p>
             </div>
           </div>
         </DialogHeader>
 
         <div
           ref={scrollRef}
-          className="max-h-[50vh] min-h-[120px] overflow-y-auto rounded-md border border-border bg-secondary/40 p-3"
+          className="relative mx-6 mt-4 max-h-[50vh] min-h-[140px] overflow-y-auto rounded-xl border border-border/50 bg-secondary/40 p-4"
         >
           {isStarting ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -89,12 +100,25 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="relative mt-4 border-t border-border/30 bg-background/40 px-6 py-4">
           <div className="flex w-full items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {isStreaming ? "Working..." : isDone ? "Done" : " "}
+              {isStreaming ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Working
+                </span>
+              ) : isDone ? (
+                "Done"
+              ) : (
+                " "
+              )}
             </span>
-            <Button onClick={() => onOpenChange(false)}>
+            <Button
+              onClick={() => onOpenChange(false)}
+              variant={isStreaming ? "outline" : "default"}
+              className="rounded-full"
+            >
               {isDone || !isStreaming ? "Close" : "Stop"}
             </Button>
           </div>

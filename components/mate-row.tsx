@@ -5,7 +5,7 @@ import { useSwipeable } from "react-swipeable"
 import type { Mate } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
-import { Play } from "lucide-react"
+import { Play, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface MateRowProps {
@@ -21,13 +21,6 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
   const swipedRef = useRef(false)
   const animatingRef = useRef(false)
 
-  const statusColors: Record<string, string> = {
-    idle: "bg-green-500",
-    working: "bg-amber-500 animate-pulse",
-    awaiting_user: "bg-blue-500",
-    off_duty: "bg-muted-foreground",
-  }
-
   const handlers = useSwipeable({
     onSwipeStart: () => {
       swipedRef.current = false
@@ -41,7 +34,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
       if (e.deltaX > LAUNCH_THRESHOLD) {
         swipedRef.current = true
         animatingRef.current = true
-        setDelta(360)
+        setDelta(420)
         setTimeout(() => {
           setDelta(0)
           animatingRef.current = false
@@ -65,47 +58,44 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
   const launchReady = delta > LAUNCH_THRESHOLD
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border">
+    <div className="relative overflow-hidden rounded-2xl border border-border/50">
       <div
         className={cn(
-          "absolute inset-y-0 left-0 flex items-center gap-2 pl-4 text-white transition-colors",
-          launchReady ? "bg-emerald-600" : "bg-emerald-500/80"
+          "absolute inset-y-0 left-0 flex items-center gap-2 pl-5 text-white transition-colors",
+          launchReady ? "bg-emerald-600" : "bg-emerald-500/85"
         )}
         style={{ width: Math.max(delta, 0) }}
       >
-        <Play className="h-5 w-5 flex-shrink-0" />
-        {delta > 40 && <span className="text-sm font-medium">Launch</span>}
+        <Play className="h-5 w-5 flex-shrink-0 fill-current" />
+        {delta > 50 && <span className="text-sm font-medium tracking-tight">Launch</span>}
       </div>
 
       <button
         type="button"
         {...handlers}
         onClick={handleClick}
-        className="relative flex w-full items-center gap-3 bg-card p-3 text-left transition-transform"
+        className="relative flex w-full items-center gap-4 overflow-hidden bg-card p-4 text-left transition-transform"
         style={{
           transform: `translateX(${delta}px)`,
-          transition: delta === 0 ? "transform 200ms ease-out" : undefined,
+          transition: delta === 0 ? "transform 220ms ease-out" : undefined,
         }}
       >
-        <div className="relative flex-shrink-0">
-          <MateAvatar name={mate.name} color={mate.color} size="md" />
-          <span
-            className={cn(
-              "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-              statusColors[mate.status]
-            )}
-          />
-        </div>
-        <div className="min-w-0 flex-1">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
+          style={{ background: mate.color }}
+        />
+        <MateAvatar name={mate.name} color={mate.color} size="md" />
+        <div className="relative z-10 min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="truncate font-medium text-foreground">{mate.name}</span>
+            <span className="truncate font-semibold tracking-tight text-foreground">
+              {mate.name}
+            </span>
             <LevelBadge level={mate.level} />
           </div>
-          <p className="truncate text-xs text-muted-foreground">{mate.tagline}</p>
+          <p className="truncate text-sm text-foreground/70">{mate.tagline}</p>
         </div>
-        <span className="hidden text-xs text-muted-foreground/70 sm:inline">
-          swipe → to launch
-        </span>
+        <ChevronRight className="relative z-10 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
       </button>
     </div>
   )

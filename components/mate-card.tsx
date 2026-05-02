@@ -3,7 +3,6 @@
 import type { Mate } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Play } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,57 +15,63 @@ interface MateCardProps {
 }
 
 export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
-  const statusColors: Record<string, string> = {
-    idle: "bg-green-500",
-    working: "bg-amber-500 animate-pulse",
-    awaiting_user: "bg-blue-500",
-    off_duty: "bg-muted-foreground",
-  }
-
   return (
-    <Card
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onOpen()
+      }}
       className={cn(
-        "group cursor-pointer transition-all hover:border-foreground/20 hover:shadow-md",
+        "group relative cursor-pointer overflow-hidden rounded-2xl border border-border/50 bg-card text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-border hover:shadow-lg",
         className
       )}
-      onClick={onOpen}
     >
-      <CardContent className="flex h-full flex-col p-4">
-        <div className="flex items-start gap-3">
-          <div className="relative flex-shrink-0">
-            <MateAvatar name={mate.name} color={mate.color} size="md" />
-            <span
-              className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                statusColors[mate.status]
-              )}
-            />
-          </div>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full opacity-30 blur-3xl transition-opacity group-hover:opacity-50"
+        style={{ background: mate.color }}
+      />
+
+      <div className="relative flex h-full flex-col p-5">
+        <div className="flex items-start gap-4">
+          <MateAvatar name={mate.name} color={mate.color} size="lg" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="truncate font-semibold text-foreground">{mate.name}</h3>
+              <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
+                {mate.name}
+              </h3>
               <LevelBadge level={mate.level} />
             </div>
-            <p className="text-xs capitalize text-muted-foreground">{mate.archetype}</p>
-            <p className="mt-1 text-sm text-foreground/80">{mate.tagline}</p>
+            <p className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80">
+              {mate.archetype}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-foreground/80">
+              {mate.tagline}
+            </p>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between gap-2 border-t border-border pt-3">
+
+        <div className="mt-5 flex items-center justify-between gap-2 pt-4">
           <span className="text-xs text-muted-foreground">
-            {mate.episode_count} {mate.episode_count === 1 ? "run" : "runs"}
+            {mate.episode_count === 0
+              ? "Not run yet"
+              : `${mate.episode_count} ${mate.episode_count === 1 ? "run" : "runs"}`}
           </span>
           <Button
             size="sm"
+            className="rounded-full"
             onClick={(e) => {
               e.stopPropagation()
               onLaunch()
             }}
           >
-            <Play className="mr-1.5 h-3.5 w-3.5" />
+            <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
             Launch
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
