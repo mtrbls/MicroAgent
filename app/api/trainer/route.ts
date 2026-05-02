@@ -1,6 +1,6 @@
 import { sql, DEFAULT_USER_ID } from "@/db"
 import { trainerModel } from "@/lib/ai"
-import { streamText, tool, convertToModelMessages, UIMessage } from "ai"
+import { streamText, tool, convertToModelMessages, stepCountIs, UIMessage } from "ai"
 import { z } from "zod"
 
 export const maxDuration = 60
@@ -147,7 +147,7 @@ Keep responses concise. When a mate is summoned, let the user know which mate is
         },
       }),
     },
-    maxSteps: 5,
+    stopWhen: stepCountIs(5),
     abortSignal: request.signal,
   })
 

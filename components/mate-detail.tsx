@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider"
 import { ArrowUp, ArrowDown, Trash2, Link2, Check, ExternalLink, Send } from "lucide-react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
-import { useRef, useEffect as useEffectScroll } from "react"
+import { useRef } from "react"
 import { Input } from "@/components/ui/input"
 
 interface MateDetailProps {

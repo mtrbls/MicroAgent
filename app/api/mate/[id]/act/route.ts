@@ -1,8 +1,8 @@
-import { sql } from "@/db"
+import { sql, DEFAULT_USER_ID } from "@/db"
 import { mateModel } from "@/lib/ai"
 import { getToolsForMate, getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
-import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai"
+import { streamText, convertToModelMessages, UIMessage, stepCountIs, type ToolSet } from "ai"
 import { NextResponse } from "next/server"
 
 export const maxDuration = 60
@@ -34,6 +34,25 @@ export async function POST(
     const voice = mate.voice as { register: string; signature_phrases: string[]; forbidden_phrases: string[] }
     const facts = memoryFacts.map((f) => f.fact as string).join("\n- ")
 
+    const startTime = Date.now()
+
+    // Get real tools from Composio session. If anything fails (or no toolkits
+    // are configured / connected), fall back to no tools so chat still works.
+    const toolkits = getToolkitsForMate(mate)
+    let tools: ToolSet = {}
+
+    if (toolkits.length > 0 && process.env.COMPOSIO_API_KEY) {
+      const toolResult = await getToolsForMate(mate, DEFAULT_USER_ID)
+      if (toolResult?.tools) {
+        tools = toolResult.tools as ToolSet
+      }
+    }
+
+    const toolkitsLine =
+      toolkits.length > 0
+        ? `\nAvailable toolkits (via Composio tool router): ${toolkits.join(", ")}.\nUse COMPOSIO_SEARCH_TOOLS to find a specific tool, then COMPOSIO_MULTI_EXECUTE_TOOL (or the discovered tool) to call it.`
+        : ""
+
     const systemPrompt = `You are ${mate.name}, a ${mate.archetype} assistant.
 ${mate.tagline}
 
@@ -43,39 +62,18 @@ Phrases you never use: ${voice.forbidden_phrases.join(", ")}
 
 Things you remember about the user:
 - ${facts || "No memories yet."}
+${toolkitsLine}
 
 ${mate.system_prompt_template || "Help the user with their request efficiently and in character."}
 
 Always stay in character. Be concise but helpful.`
 
-    const startTime = Date.now()
-
-    // Get real tools from Composio session
-    const toolkits = getToolkitsForMate(mate)
-    let tools = {}
-
-    if (toolkits.length > 0 && process.env.COMPOSIO_API_KEY) {
-      try {
-        const toolResult = await getToolsForMate(mate, "user_demo")
-        if (toolResult?.requiresAuth) {
-          return NextResponse.json(
-            { error: "Authentication required", authUrl: toolResult.authUrl },
-            { status: 401 }
-          )
-        }
-        if (toolResult?.tools) {
-          tools = toolResult.tools
-        }
-      } catch (error) {
-        console.error("[v0] Failed to load tools:", error)
-        // Continue without tools if loading fails
-      }
-    }
-
     // Convert messages or use task as prompt
     const modelMessages = messages
       ? await convertToModelMessages(messages)
       : [{ role: "user" as const, content: task || "Hello" }]
+
+    await sql`UPDATE mates SET status = 'working' WHERE id = ${id}`
 
     const result = streamText({
       model: mateModel,
@@ -112,9 +110,6 @@ Always stay in character. Be concise but helpful.`
         `
       },
     })
-
-    // Update status to working
-    await sql`UPDATE mates SET status = 'working' WHERE id = ${id}`
 
     return result.toUIMessageStreamResponse()
   } catch (error) {

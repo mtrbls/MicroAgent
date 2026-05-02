@@ -54,30 +54,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { id } = await params
     const updates = await request.json()
 
-    const allowedFields = [
-      "name",
-      "tagline",
-      "voice",
-      "confidence_threshold",
-      "status",
-    ]
-
-    const fieldsToUpdate = Object.keys(updates).filter((k) =>
-      allowedFields.includes(k)
-    )
-
-    if (fieldsToUpdate.length === 0) {
-      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 })
-    }
-
-    // Build dynamic update - simplified approach
-    for (const field of fieldsToUpdate) {
-      const value = field === "voice" ? JSON.stringify(updates[field]) : updates[field]
-      await sql`
-        UPDATE mates 
-        SET ${sql(field)} = ${value}
-        WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}
-      `
+    for (const [field, raw] of Object.entries(updates)) {
+      switch (field) {
+        case "name":
+          await sql`UPDATE mates SET name = ${raw as string} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
+        case "tagline":
+          await sql`UPDATE mates SET tagline = ${raw as string} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
+        case "voice":
+          await sql`UPDATE mates SET voice = ${JSON.stringify(raw)} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
+        case "confidence_threshold":
+          await sql`UPDATE mates SET confidence_threshold = ${raw as number} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
+        case "status":
+          await sql`UPDATE mates SET status = ${raw as string} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
+      }
     }
 
     return NextResponse.json({ success: true })
