@@ -2,7 +2,19 @@
 
 import { cn } from "@/lib/utils"
 
-const XP_PER_LEVEL = 30
+const FIRST_LEVEL_XP = 5
+const XP_PER_LEVEL_AFTER = 30
+
+export function levelProgress(experience: number) {
+  const xp = Math.max(0, Math.floor(experience || 0))
+  if (xp < FIRST_LEVEL_XP) {
+    return { level: 1, xpInLevel: xp, xpForLevel: FIRST_LEVEL_XP }
+  }
+  const adjusted = xp - FIRST_LEVEL_XP
+  const level = Math.floor(adjusted / XP_PER_LEVEL_AFTER) + 2
+  const xpInLevel = adjusted % XP_PER_LEVEL_AFTER
+  return { level, xpInLevel, xpForLevel: XP_PER_LEVEL_AFTER }
+}
 
 interface ExperienceBarProps {
   experience: number
@@ -10,17 +22,15 @@ interface ExperienceBarProps {
 }
 
 export function ExperienceBar({ experience, className }: ExperienceBarProps) {
-  const xp = Math.max(0, Math.floor(experience || 0))
-  const level = Math.floor(xp / XP_PER_LEVEL) + 1
-  const xpInLevel = xp % XP_PER_LEVEL
-  const progress = Math.min(1, xpInLevel / XP_PER_LEVEL)
+  const { level, xpInLevel, xpForLevel } = levelProgress(experience)
+  const progress = xpForLevel === 0 ? 0 : Math.min(1, xpInLevel / xpForLevel)
 
   return (
     <div className={cn("space-y-1", className)}>
       <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
         <span>Lv {level}</span>
         <span className="tabular-nums">
-          {xpInLevel}/{XP_PER_LEVEL} xp
+          {xpInLevel}/{xpForLevel} xp
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full border border-foreground/20 bg-muted">

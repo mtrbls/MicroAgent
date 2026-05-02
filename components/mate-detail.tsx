@@ -120,9 +120,10 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
           </div>
         </div>
       </SheetHeader>
-      <ExperienceBar experience={mate.experience ?? 0} className="mt-3" />
+      <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 sm:px-6">
+        <ExperienceBar experience={mate.experience ?? 0} className="mt-3" />
 
-      <Tabs defaultValue="chat" className="mt-4 flex min-h-0 flex-1 flex-col">
+        <Tabs defaultValue="chat" className="mt-4 flex min-h-0 flex-1 flex-col">
         <TabsList className="w-full">
           <TabsTrigger value="chat" className="flex-1">
             Chat
@@ -365,7 +366,8 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
             </div>
           </div>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </>
   )
 }

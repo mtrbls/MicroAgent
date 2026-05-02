@@ -62,17 +62,37 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
     setInput("")
   }
 
-  const submitFeedback = async (verdict: "success" | "failure", comment?: string) => {
+  const lastAssistantId = () =>
+    [...messages].reverse().find((m) => m.role === "assistant")?.id
+
+  const submitVerdict = async (verdict: "success" | "failure") => {
+    setFeedbackVerdict(verdict)
     setFeedbackSending(true)
     try {
-      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant")
       await fetch(`/api/mate/${mate.id}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          kind: "verdict",
           outcome: verdict,
-          rationale: comment?.trim() || undefined,
-          reference_id: lastAssistant?.id,
+          reference_id: lastAssistantId(),
+        }),
+      })
+    } finally {
+      setFeedbackSending(false)
+    }
+  }
+
+  const submitLesson = async (text: string) => {
+    setFeedbackSending(true)
+    try {
+      await fetch(`/api/mate/${mate.id}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "lesson",
+          lesson: text,
+          reference_id: lastAssistantId(),
         }),
       })
       setFeedbackSubmitted(true)
@@ -168,52 +188,17 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
           {isIdle && (
             <div className="mt-2 mr-8 rounded-xl border border-border/50 bg-background/60 p-3">
-              {feedbackSubmitted ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  Thanks — captured for next time.
-                </div>
-              ) : feedbackVerdict === "failure" ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    What should it have done differently?
-                  </p>
-                  <Input
-                    value={feedbackComment}
-                    onChange={(e) => setFeedbackComment(e.target.value)}
-                    placeholder="One short sentence..."
-                    className="rounded-md"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setFeedbackVerdict(null)}
-                      disabled={feedbackSending}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => submitFeedback("failure", feedbackComment)}
-                      disabled={feedbackSending}
-                    >
-                      {feedbackSending ? "Saving..." : "Send"}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
+              {feedbackVerdict === null ? (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">
-                    Did this help {mate.name} learn?
+                    Did this help {mate.name} learn? (+5 xp)
                   </span>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => submitFeedback("success")}
+                      onClick={() => submitVerdict("success")}
                       disabled={feedbackSending}
                       title="Helpful"
                     >
@@ -223,11 +208,39 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => setFeedbackVerdict("failure")}
+                      onClick={() => submitVerdict("failure")}
                       disabled={feedbackSending}
                       title="Needs work"
                     >
                       <ThumbsDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : feedbackSubmitted ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  Thanks — captured.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    {feedbackVerdict === "success" ? "Marked helpful." : "Marked needs work."}
+                    {" Add a lesson? (optional)"}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={feedbackComment}
+                      onChange={(e) => setFeedbackComment(e.target.value)}
+                      placeholder="What should it do differently next time?"
+                      className="rounded-md"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => submitLesson(feedbackComment)}
+                      disabled={feedbackSending || !feedbackComment.trim()}
+                    >
+                      {feedbackSending ? "..." : "Save"}
                     </Button>
                   </div>
                 </div>

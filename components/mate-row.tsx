@@ -3,7 +3,9 @@
 import { useRef, useState } from "react"
 import { useSwipeable } from "react-swipeable"
 import type { Mate } from "@/lib/types"
+import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
+import { levelProgress } from "./experience-bar"
 import { Play, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -79,18 +81,19 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
           type="button"
           {...handlers}
           onClick={handleClick}
-          className="relative flex w-full items-center gap-4 bg-white p-4 text-left transition-transform"
+          className="relative flex w-full items-center gap-3 bg-white p-3 text-left transition-transform"
           style={{
             transform: `translateX(${delta}px)`,
             transition: delta === 0 ? "transform 220ms ease-out" : undefined,
           }}
         >
+          <MateAvatar name={mate.name} color={mate.color} size="md" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate font-semibold tracking-tight text-foreground">
                 {mate.name}
               </span>
-              <LevelBadge level={mate.level} />
+              <LevelBadge level={levelProgress(mate.experience ?? 0).level} />
             </div>
             <p className="truncate text-sm text-foreground/70">{mate.tagline}</p>
           </div>
