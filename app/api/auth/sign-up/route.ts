@@ -7,6 +7,13 @@ const MIN_PASSWORD = 8
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { error: "Server misconfigured: DATABASE_URL is not set." },
+        { status: 500 }
+      )
+    }
+
     // Idempotent schema bootstrap. First sign-up creates the table; subsequent
     // sign-ups are no-ops on this statement.
     await sql`
@@ -49,6 +56,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, id })
   } catch (err) {
     console.error("[sign-up] failed:", err)
-    return NextResponse.json({ error: "Sign up failed." }, { status: 500 })
+    const detail = err instanceof Error ? err.message : String(err)
+    return NextResponse.json(
+      { error: `Sign up failed: ${detail}` },
+      { status: 500 }
+    )
   }
 }
