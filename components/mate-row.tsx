@@ -57,7 +57,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
   const launchReady = delta > LAUNCH_THRESHOLD
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/50">
+    <div className="relative overflow-hidden border-2 border-foreground bg-white">
       <div
         className={cn(
           "absolute inset-y-0 left-0 flex items-center gap-2 pl-5 text-white transition-colors",
@@ -73,23 +73,13 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
         type="button"
         {...handlers}
         onClick={handleClick}
-        className="relative flex w-full items-center gap-4 overflow-hidden bg-card p-4 pl-5 text-left transition-transform"
+        className="relative flex w-full items-center gap-4 bg-white p-4 text-left transition-transform"
         style={{
           transform: `translateX(${delta}px)`,
           transition: delta === 0 ? "transform 220ms ease-out" : undefined,
         }}
       >
-        <span
-          aria-hidden
-          className="absolute inset-y-3 left-0 w-1 rounded-r-full"
-          style={{ background: mate.color }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl"
-          style={{ background: mate.color }}
-        />
-        <div className="relative z-10 min-w-0 flex-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate font-semibold tracking-tight text-foreground">
               {mate.name}
@@ -98,7 +88,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
           </div>
           <p className="truncate text-sm text-foreground/70">{mate.tagline}</p>
         </div>
-        <ChevronRight className="relative z-10 h-4 w-4 flex-shrink-0 text-muted-foreground/60" />
+        <ChevronRight className="h-4 w-4 flex-shrink-0 text-foreground/50" />
       </button>
     </div>
   )
