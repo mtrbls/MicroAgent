@@ -43,16 +43,6 @@ const EXAMPLES: { label: string; description: string }[] = [
       "Each weekday morning, block 90 min of 'Deep Focus' on my Google Calendar before the first meeting.",
   },
   {
-    label: "🧹 Delete promo emails",
-    description:
-      "Sweep my Gmail and delete promotional emails older than 7 days. Confirm count before deleting.",
-  },
-  {
-    label: "🧾 Label invoices",
-    description:
-      "Find invoice and receipt emails from the last 90 days and apply the 'Tax-Receipts' label in Gmail.",
-  },
-  {
     label: "🔍 Quick web answer",
     description:
       "When I ask a question, search the web and return a short paragraph synthesis with sources.",
