@@ -27,7 +27,7 @@ const SUGGESTIONS: { emoji: string; label: string; prompt: string }[] = [
   },
   {
     emoji: "📅",
-    label: "Brief today's calendar",
+    label: "Brief my day",
     prompt:
       "Brief me on today's Google Calendar — every event from now through end of day in chronological order with attendees and a one-line prep note. Then list my free 30+ minute blocks.",
   },
@@ -35,25 +35,25 @@ const SUGGESTIONS: { emoji: string; label: string; prompt: string }[] = [
     emoji: "✍️",
     label: "Draft pending replies",
     prompt:
-      "Find emails sent to me in the last 7 days that I haven't replied to and aren't from automated senders. Draft a short reply for each, matching the inferred tone. Don't auto-send.",
+      "Find emails in my Gmail inbox that someone is waiting on a reply from me (received in the last 7 days, sent directly to me, no reply yet, not from automated senders). Draft a short reply for each, matching the inferred tone. Don't auto-send.",
   },
   {
-    emoji: "🐛",
-    label: "Triage Linear tickets",
+    emoji: "🤝",
+    label: "Schedule a meeting",
     prompt:
-      "Read newly-created Linear tickets in my workspace. For each, suggest a priority (P0-P3) and an owner based on team labels. Output as a list — don't update tickets unless I confirm.",
+      "Search my Gmail for messages where someone is asking to meet ('when are you free', 'let's grab a call', 'jump on a quick chat'). For each, find 3 free 30-min slots on my Google Calendar in the next 5 business days and draft a reply offering them. Don't auto-send and don't create the event.",
   },
   {
-    emoji: "📊",
-    label: "Standup from yesterday",
+    emoji: "🔍",
+    label: "Find that email",
     prompt:
-      "Pull yesterday's commits from my GitHub repos and draft a Slack standup message: what shipped, what's in flight, any blockers. Don't auto-post.",
+      "When I describe an email I'm trying to find ('the one from the bank about my mortgage'), search my Gmail intelligently — sender hints, subject keywords, date range — and return the top 3 matches with a one-line summary of each.",
   },
   {
-    emoji: "📝",
-    label: "Capture to Notion",
+    emoji: "🧹",
+    label: "Unsubscribe from junk",
     prompt:
-      "When invoked with a note, append a timestamped entry to my Notion 'Journal' page. Take the text verbatim, prepend the current date and time, append as a new bullet.",
+      "Find recurring marketing senders in my Gmail (newsletters, promos, automated lists) that I haven't opened in 30+ days. Preview the list with sender + send frequency, then on my confirmation, draft individual unsubscribe emails or click List-Unsubscribe links via the Gmail API. Always preview-then-confirm before any unsubscribe action.",
   },
 ]
 
