@@ -34,7 +34,7 @@ function getComposio() {
   }
   return new Composio({ 
     apiKey,
-    baseUrl: "https://backend.composio.dev",
+    baseURL: "https://backend.composio.dev",
     provider: new VercelProvider() 
   })
 }
