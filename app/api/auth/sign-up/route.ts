@@ -1,5 +1,6 @@
 import { sql } from "@/db"
 import { hashPassword } from "@/lib/password"
+import { sessionCookieOptions, signSession } from "@/lib/cookie"
 import { NextResponse } from "next/server"
 
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -14,9 +15,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Idempotent schema bootstrap. The table may already exist from a
-    // previous v0 deployment with a different column set, so we use
-    // additive ALTERs instead of relying on CREATE TABLE alone.
+    // Idempotent additive schema bootstrap.
     await sql`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)`
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`
@@ -51,7 +50,11 @@ export async function POST(request: Request) {
       VALUES (${id}, ${email}, ${hash}, ${salt})
     `
 
-    return NextResponse.json({ ok: true, id })
+    // Auto sign-in: set session cookie so the user lands logged in.
+    const cookieValue = await signSession(id)
+    const res = NextResponse.json({ ok: true, id })
+    res.cookies.set({ ...sessionCookieOptions(), value: cookieValue })
+    return res
   } catch (err) {
     console.error("[sign-up] failed:", err)
     const detail = err instanceof Error ? err.message : String(err)

@@ -10,7 +10,7 @@ import { ForgeFlow } from "@/components/forge-flow"
 import { LaunchModal } from "@/components/launch-modal"
 import { McpSetupModal } from "@/components/mcp-setup-modal"
 import { Button } from "@/components/ui/button"
-import { Plus, RefreshCw } from "lucide-react"
+import { Plus, RefreshCw, LogOut } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -114,6 +114,18 @@ export default function HomePage() {
               className="h-9 w-9"
             >
               <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Sign out"
+              onClick={async () => {
+                await fetch("/api/auth/sign-out", { method: "POST" })
+                window.location.href = "/sign-in"
+              }}
+              className="h-9 w-9"
+            >
+              <LogOut className="h-4 w-4" />
             </Button>
             <Button
               size="sm"

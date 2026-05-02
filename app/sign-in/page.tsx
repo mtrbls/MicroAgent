@@ -1,10 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export default function SignUpPage() {
+function SignInForm() {
   const router = useRouter()
+  const params = useSearchParams()
+  const next = params.get("next") || "/"
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -15,17 +18,16 @@ export default function SignUpPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/auth/sign-up", {
+      const res = await fetch("/api/auth/sign-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       })
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? "Sign up failed")
+        throw new Error(data.error ?? "Sign in failed")
       }
-      // Sign-up auto-signs-in via session cookie; land on the home page.
-      router.push("/")
+      router.push(next)
       router.refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong")
@@ -40,15 +42,11 @@ export default function SignUpPage() {
         <span className="font-semibold">μ</span>
         <span className="font-light">Agent</span>
       </h1>
-      <p className="mb-6 text-sm text-foreground/70">
-        Create an account. You'll be signed in automatically after.
-      </p>
+      <p className="mb-6 text-sm text-foreground/70">Sign in to your account.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block">
-          <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            Email
-          </span>
+          <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Email</span>
           <input
             type="email"
             required
@@ -59,14 +57,11 @@ export default function SignUpPage() {
           />
         </label>
         <label className="block">
-          <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            Password (8+ chars)
-          </span>
+          <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Password</span>
           <input
             type="password"
             required
-            minLength={8}
-            autoComplete="new-password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 w-full border-2 border-foreground bg-white px-3 py-2 text-sm focus:outline-none"
@@ -84,9 +79,24 @@ export default function SignUpPage() {
           disabled={loading}
           className="w-full border-2 border-foreground bg-foreground px-4 py-2 text-sm font-medium text-background shadow-[4px_4px_0_0_var(--color-foreground)] transition-transform hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_0_var(--color-foreground)] disabled:opacity-60"
         >
-          {loading ? "Creating..." : "Create account"}
+          {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
+
+      <p className="mt-6 text-sm text-foreground/70">
+        New here?{" "}
+        <a href="/sign-up" className="underline underline-offset-2">
+          Create an account
+        </a>
+      </p>
     </main>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
   )
 }
