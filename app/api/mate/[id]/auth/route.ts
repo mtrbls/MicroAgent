@@ -3,19 +3,21 @@ import { getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
 import { NextResponse } from "next/server"
 
-// Use Composio REST API directly for more control
-const COMPOSIO_API = "https://api.composio.dev/api/v3"
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 
-async function composioFetch(path: string, options: RequestInit = {}) {
-  const response = await fetch(`${COMPOSIO_API}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": process.env.COMPOSIO_API_KEY!,
-      ...options.headers,
-    },
-  })
-  return response.json()
+// Map toolkit names to Google OAuth scopes
+const TOOLKIT_SCOPES: Record<string, string[]> = {
+  gmail: [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.modify",
+  ],
+  googlecalendar: [
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.events",
+  ],
 }
 
 export async function GET(
@@ -43,73 +45,71 @@ export async function GET(
       })
     }
 
-    // Check if Composio is configured
-    if (!process.env.COMPOSIO_API_KEY) {
+    // Check if Google OAuth is configured
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      const connections: Record<string, { connected: boolean; needsSetup: boolean }> = {}
+      for (const toolkit of toolkits) {
+        connections[toolkit] = { connected: false, needsSetup: true }
+      }
       return NextResponse.json({
         toolkits,
-        connections: {},
+        connections,
         allConnected: false,
-        error: "COMPOSIO_API_KEY not configured",
+        error: "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable OAuth",
       })
     }
 
-    const userId = `user_demo_${mate.id}`
+    // Check for existing valid token
+    const tokens = await sql`
+      SELECT * FROM oauth_tokens 
+      WHERE user_id = 'user_demo' 
+      AND provider = 'google'
+      AND expires_at > NOW()
+    `
+    const hasValidToken = tokens.length > 0
+
+    // Build OAuth URL if needed
     const origin = request.headers.get("origin") || "http://localhost:3000"
-    const redirectUrl = `${origin}/auth/callback?mate=${id}`
-
-    // Check connection status for each toolkit
-    const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
-    let allConnected = true
-
+    const redirectUri = `${origin}/api/auth/google/callback`
+    
+    // Collect all required scopes
+    const allScopes = ["openid", "email", "profile"]
     for (const toolkit of toolkits) {
-      try {
-        // Check if user has an active connection for this toolkit
-        const existingConnections = await composioFetch(
-          `/connectedAccounts?user_id=${encodeURIComponent(userId)}&toolkit=${toolkit}`
-        )
+      allScopes.push(...(TOOLKIT_SCOPES[toolkit] || []))
+    }
+    
+    const state = Buffer.from(JSON.stringify({ mateId: id, userId: "user_demo" })).toString("base64")
+    const authUrl = hasValidToken ? undefined : buildGoogleAuthUrl([...new Set(allScopes)], redirectUri, state)
 
-        console.log(`[v0] Composio existing connections for ${toolkit}:`, JSON.stringify(existingConnections))
-
-        const activeConnection = existingConnections?.items?.find(
-          (c: { status: string }) => c.status === "ACTIVE"
-        )
-
-        if (activeConnection) {
-          connections[toolkit] = { connected: true }
-        } else {
-          // Initiate a new connection to get OAuth URL
-          const newConnection = await composioFetch("/connectedAccounts", {
-            method: "POST",
-            body: JSON.stringify({
-              toolkit,
-              user_id: userId,
-              callback_url: redirectUrl,
-            }),
-          })
-
-          console.log(`[v0] Composio new connection response for ${toolkit}:`, JSON.stringify(newConnection))
-
-          const authUrl = newConnection?.connection?.state?.authUri || 
-                         newConnection?.authUri || 
-                         newConnection?.redirectUrl
-
-          connections[toolkit] = { connected: false, authUrl }
-          allConnected = false
-        }
-      } catch (error) {
-        console.error(`[v0] Error checking ${toolkit}:`, error)
-        connections[toolkit] = { connected: false }
-        allConnected = false
+    // Build connections response
+    const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
+    for (const toolkit of toolkits) {
+      connections[toolkit] = {
+        connected: hasValidToken,
+        authUrl,
       }
     }
 
     return NextResponse.json({
       toolkits,
       connections,
-      allConnected,
+      allConnected: hasValidToken,
     })
   } catch (error) {
     console.error("Error checking mate auth:", error)
     return NextResponse.json({ error: "Failed to check auth status" }, { status: 500 })
   }
+}
+
+function buildGoogleAuthUrl(scopes: string[], redirectUri: string, state: string): string {
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID!,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: scopes.join(" "),
+    access_type: "offline",
+    prompt: "consent",
+    state,
+  })
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
 }
