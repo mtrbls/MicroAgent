@@ -1,12 +1,12 @@
 import { Composio } from "@composio/core"
 import type { Mate, MCPToolBinding } from "./types"
 
-// Map our internal tool names to Composio toolkit names
+// Map our internal tool names to Composio toolkit slugs
 const TOOLKIT_MAP: Record<string, string> = {
-  gmail: "gmail",
-  calendar: "googlecalendar",
-  "web-search": "serpapi",
-  github: "github",
+  gmail: "GMAIL",
+  calendar: "GOOGLECALENDAR",
+  "web-search": "SERPAPI",
+  github: "GITHUB",
 }
 
 // Get the toolkits a mate needs based on their tool bindings
@@ -24,55 +24,88 @@ export function getToolkitsForMate(mate: Mate): string[] {
   return Array.from(toolkits)
 }
 
-// Create a Composio session for a mate and get tools
-export async function createComposioSession(mate: Mate, userId: string) {
+// Create a Composio client
+function getComposio() {
   if (!process.env.COMPOSIO_API_KEY) {
     console.log("[v0] COMPOSIO_API_KEY not set")
     return null
   }
+  return new Composio()
+}
+
+// Create a session for a user/mate and get tools
+export async function getToolsForMate(mate: Mate, userId: string) {
+  const composio = getComposio()
+  if (!composio) return null
 
   const toolkits = getToolkitsForMate(mate)
+  if (toolkits.length === 0) return null
 
-  if (toolkits.length === 0) {
-    return null
-  }
-
-  const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY })
   const entityId = `${userId}_${mate.id}`
 
   try {
-    // Create a session for this user
-    const session = await composio.create(entityId, {
-      toolkits,
-    })
-
-    return session
-  } catch (error) {
-    console.error("[v0] Error creating Composio session:", error)
+    // Create session - this is the v3 API entry point
+    const session = await composio.create(entityId)
+    
+    // Get tools for the specific toolkits
+    const tools = await session.tools({ toolkits })
+    
+    return { requiresAuth: false, authUrl: null, tools }
+  } catch (error: unknown) {
+    console.error("[v0] Composio error:", error)
+    
+    // Check if this is an auth required error
+    const errMsg = error instanceof Error ? error.message : String(error)
+    if (errMsg.includes("auth") || errMsg.includes("connect")) {
+      // Need to initiate auth flow
+      try {
+        const session = await composio.create(entityId)
+        // Get auth URL for the first toolkit that needs it
+        const authUrl = await session.getAuthUrl(toolkits[0])
+        return { requiresAuth: true, authUrl, tools: null }
+      } catch (authError) {
+        console.error("[v0] Error getting auth URL:", authError)
+      }
+    }
+    
     return null
   }
 }
 
-// Get tools for a mate - returns AI SDK compatible tools
-export async function getToolsForMate(mate: Mate, userId: string) {
-  const session = await createComposioSession(mate, userId)
+// Check auth status and get auth URL if needed
+export async function checkAuthStatus(mate: Mate, userId: string) {
+  const composio = getComposio()
+  if (!composio) return { error: "COMPOSIO_API_KEY not configured" }
 
-  if (!session) {
-    return null
-  }
+  const toolkits = getToolkitsForMate(mate)
+  if (toolkits.length === 0) return { connections: {} }
 
-  // Check if auth is needed
-  if (session.pendingAuthUrl) {
-    console.log("[v0] Auth required for mate tools:", session.pendingAuthUrl)
-    return { requiresAuth: true, authUrl: session.pendingAuthUrl, tools: null }
-  }
+  const entityId = `${userId}_${mate.id}`
+  const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
 
   try {
-    // Get tools from the session
-    const tools = await session.tools()
-    return { requiresAuth: false, authUrl: null, tools }
+    const session = await composio.create(entityId)
+    
+    for (const toolkit of toolkits) {
+      try {
+        // Try to get tools for this toolkit - if it works, we're connected
+        await session.tools({ toolkits: [toolkit] })
+        connections[toolkit.toLowerCase()] = { connected: true }
+      } catch {
+        // Need auth - get the URL
+        try {
+          const authUrl = await session.getAuthUrl(toolkit)
+          connections[toolkit.toLowerCase()] = { connected: false, authUrl }
+        } catch (urlError) {
+          console.error(`[v0] Error getting auth URL for ${toolkit}:`, urlError)
+          connections[toolkit.toLowerCase()] = { connected: false }
+        }
+      }
+    }
+    
+    return { connections }
   } catch (error) {
-    console.error("[v0] Error getting tools from session:", error)
-    return null
+    console.error("[v0] Error checking auth status:", error)
+    return { error: String(error) }
   }
 }
