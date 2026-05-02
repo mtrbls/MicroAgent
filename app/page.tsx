@@ -130,7 +130,7 @@ export default function HomePage() {
         ) : (
           <>
             {/* Mobile: swipable list */}
-            <div className="space-y-2 md:hidden">
+            <div className="space-y-3 md:hidden">
               {mates.map((mate) => (
                 <MateRow
                   key={mate.id}

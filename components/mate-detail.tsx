@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import type { Mate, Episode, MemoryFact } from "@/lib/types"
+import type { Mate, Episode } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
 import { EpisodeLog } from "./episode-log"
-import { MemoryFacts } from "./memory-facts"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -45,7 +44,6 @@ interface MateDetailContentProps {
 interface MateDetailData {
   mate: Mate
   episodes: Episode[]
-  memoryFacts: MemoryFact[]
 }
 
 function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
@@ -119,12 +117,6 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
           </TabsTrigger>
           <TabsTrigger value="activity" className="flex-1">
             Activity
-          </TabsTrigger>
-          <TabsTrigger value="memory" className="flex-1">
-            Memory
-          </TabsTrigger>
-          <TabsTrigger value="connections" className="flex-1">
-            Apps
           </TabsTrigger>
           <TabsTrigger value="settings" className="flex-1">
             Settings
@@ -203,70 +195,62 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="memory" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
-          {loading ? (
-            <div className="py-8 text-center text-muted-foreground">Loading...</div>
-          ) : (
-            <MemoryFacts facts={data?.memoryFacts || []} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="connections" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Connect apps to give {mate.name} real capabilities.
-            </p>
-            {authLoading ? (
-              <div className="py-8 text-center text-muted-foreground">Loading...</div>
-            ) : Object.keys(authStatus).length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                No apps configured for this mate.
-              </div>
-            ) : (
-              Object.entries(authStatus).map(([app, s]) => (
-                <div
-                  key={app}
-                  className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                      <Link2 className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium capitalize">{app.replace("_", " ")}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {s.connected ? "Connected" : "Not connected"}
-                      </p>
-                    </div>
-                  </div>
-                  {s.connected ? (
-                    <div className="flex items-center gap-1 text-sm text-green-600">
-                      <Check className="h-4 w-4" />
-                      Active
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        if (s.authUrl) window.open(s.authUrl, "_blank")
-                      }}
-                    >
-                      Connect
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </TabsContent>
-
         <TabsContent value="settings" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
           <div className="space-y-6">
             <div>
               <h4 className="mb-3 text-sm font-medium text-foreground">
-                Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
+                Connected apps
+              </h4>
+              {authLoading ? (
+                <div className="py-4 text-sm text-muted-foreground">Loading...</div>
+              ) : Object.keys(authStatus).length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No apps configured for this mate.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(authStatus).map(([app, s]) => (
+                    <div
+                      key={app}
+                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                          <Link2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium capitalize">{app.replace("_", " ")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {s.connected ? "Connected" : "Not connected"}
+                          </p>
+                        </div>
+                      </div>
+                      {s.connected ? (
+                        <div className="flex items-center gap-1 text-sm text-green-600">
+                          <Check className="h-4 w-4" />
+                          Active
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (s.authUrl) window.open(s.authUrl, "_blank")
+                          }}
+                        >
+                          Connect
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-border pt-6">
+              <h4 className="mb-3 text-sm font-medium text-foreground">
+                Confidence threshold: {Math.round(confidenceThreshold * 100)}%
               </h4>
               <Slider
                 value={[confidenceThreshold]}
@@ -281,14 +265,14 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
               </p>
             </div>
 
-            <div className="border-t border-border pt-4">
+            <div className="border-t border-border pt-6">
               <Button
                 variant="destructive"
                 className="w-full justify-start"
                 onClick={() => onArchive?.(mate.id)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Archive Mate
+                Archive mate
               </Button>
             </div>
           </div>

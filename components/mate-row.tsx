@@ -57,7 +57,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
   const launchReady = delta > LAUNCH_THRESHOLD
 
   return (
-    <div className="relative overflow-hidden border-2 border-foreground bg-white">
+    <div className="relative overflow-hidden border-2 border-foreground bg-white shadow-[4px_4px_0_0_var(--color-foreground)]">
       <div
         className={cn(
           "absolute inset-y-0 left-0 flex items-center gap-2 pl-5 text-white transition-colors",
