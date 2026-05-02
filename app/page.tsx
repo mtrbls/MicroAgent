@@ -3,8 +3,7 @@
 import { useState, useCallback } from "react"
 import useSWR, { mutate } from "swr"
 import type { Mate } from "@/lib/types"
-import { ActiveSquad } from "@/components/active-squad"
-import { Bench } from "@/components/bench"
+import { MateCard } from "@/components/mate-card"
 import { TrainerChat } from "@/components/trainer-chat"
 import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
@@ -14,9 +13,7 @@ import { MessageSquare, Sparkles } from "lucide-react"
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface SquadData {
-  activeSquad: Mate[]
-  bench: Mate[]
-  roster: Mate[]
+  mates: Mate[]
 }
 
 export default function HomePage() {
@@ -33,35 +30,6 @@ export default function HomePage() {
   const handleMateClick = useCallback((mate: Mate) => {
     setSelectedMate(mate)
     setMateDetailOpen(true)
-  }, [])
-
-  const handleRecruit = useCallback(async (mate: Mate) => {
-    await fetch("/api/squad", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "recruit", mateId: mate.id }),
-    })
-    mutate("/api/squad")
-  }, [])
-
-  const handlePromote = useCallback(async (mateId: string) => {
-    await fetch("/api/squad", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "promote", mateId }),
-    })
-    mutate("/api/squad")
-    setMateDetailOpen(false)
-  }, [])
-
-  const handleDemote = useCallback(async (mateId: string) => {
-    await fetch("/api/squad", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "demote", mateId }),
-    })
-    mutate("/api/squad")
-    setMateDetailOpen(false)
   }, [])
 
   const handleArchive = useCallback(async (mateId: string) => {
@@ -91,24 +59,17 @@ export default function HomePage() {
     )
   }
 
-  const activeSquad = data?.activeSquad || []
-  const bench = data?.bench || []
-  const roster = data?.roster || []
+  const mates = data?.mates || []
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-foreground">Mates</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setForgeOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setForgeOpen(true)}>
               <Sparkles className="mr-2 h-4 w-4" />
               Forge
             </Button>
@@ -120,27 +81,28 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
-        <div className="space-y-6">
-          {/* Active Squad */}
-          <ActiveSquad
-            mates={activeSquad}
-            onMateClick={handleMateClick}
-            onEmptySlotClick={() => setTrainerOpen(true)}
-          />
-
-          {/* Bench & Roster */}
-          <Bench
-            mates={bench}
-            roster={roster}
-            onMateClick={handleMateClick}
-            onRecruit={handleRecruit}
-          />
-        </div>
+        {mates.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-16 text-center">
+            <p className="text-muted-foreground">No mates yet</p>
+            <p className="mt-1 text-sm text-muted-foreground/70">
+              Click Forge to create your first mate
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {mates.map((mate) => (
+              <MateCard
+                key={mate.id}
+                mate={mate}
+                variant="full"
+                onClick={() => handleMateClick(mate)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Slide-overs and Modals */}
       <TrainerChat
         open={trainerOpen}
         onOpenChange={setTrainerOpen}
@@ -151,8 +113,6 @@ export default function HomePage() {
         mate={selectedMate}
         open={mateDetailOpen}
         onOpenChange={setMateDetailOpen}
-        onPromote={handlePromote}
-        onDemote={handleDemote}
         onArchive={handleArchive}
       />
 

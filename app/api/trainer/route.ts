@@ -10,28 +10,27 @@ export async function POST(request: Request) {
 
   // Load user's mates for context
   const mates = await sql`
-    SELECT id, name, archetype, tagline, status, on_active_squad, level, episode_count
-    FROM mates 
+    SELECT id, name, archetype, tagline, status, level, episode_count
+    FROM mates
     WHERE user_id = ${DEFAULT_USER_ID} AND is_recruited = true
   `
 
   const mateList = mates
     .map(
       (m) =>
-        `- ${m.name} (${m.archetype}): ${m.tagline} [Level ${m.level}, ${m.episode_count} episodes, ${m.on_active_squad ? "active" : "benched"}]`
+        `- ${m.name} (${m.archetype}): ${m.tagline} [Level ${m.level}, ${m.episode_count} episodes]`
     )
     .join("\n")
 
   const systemPrompt = `You are the Trainer, an orchestration AI that helps users manage their team of AI mates.
 
 The user's current team:
-${mateList || "No mates recruited yet."}
+${mateList || "No mates yet."}
 
 You can:
 1. Route tasks to specific mates using summon_mate
 2. Help create new custom mates using forge_mate
-3. Manage the active squad (max 6) using swap_squad
-4. Provide summaries of mate activity using inspect_mate
+3. Provide summaries of mate activity using inspect_mate
 
 Always be helpful and suggest which mate might handle a task. If no mate fits, suggest forging a new one.
 Keep responses concise. When a mate is summoned, let the user know which mate is handling it.`
@@ -84,37 +83,6 @@ Keep responses concise. When a mate is summoned, let the user know which mate is
             description,
             message: `Opening the forge to create a new mate based on: ${description}`,
           }
-        },
-      }),
-
-      swap_squad: tool({
-        description: "Swap a mate into or out of the active squad",
-        inputSchema: z.object({
-          action: z.enum(["promote", "demote", "swap"]).describe("The action to take"),
-          mate_id: z.string().optional().describe("The mate to promote or demote"),
-          in_id: z.string().optional().describe("For swap: the mate to bring in"),
-          out_id: z.string().optional().describe("For swap: the mate to remove"),
-        }),
-        execute: async ({ action, mate_id, in_id, out_id }) => {
-          const body =
-            action === "swap"
-              ? { action, inId: in_id, outId: out_id }
-              : { action, mateId: mate_id }
-
-          const response = await fetch(
-            `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/squad`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(body),
-            }
-          )
-
-          if (!response.ok) {
-            return { error: "Failed to update squad" }
-          }
-
-          return { success: true, action, message: `Squad updated: ${action}` }
         },
       }),
 
