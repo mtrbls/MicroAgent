@@ -1,44 +1,50 @@
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 import { DEFAULT_MATES } from "@/lib/default-mates"
 import { registerMateOnMubit } from "@/lib/mubit"
 import { NextResponse } from "next/server"
 
 export async function POST() {
   try {
-    // Lightweight schema migration: ensure the schedule column exists. Safe
-    // to run on every seed (NO-OP if it already exists).
+    const userId = await getUserId()
+
+    // Lightweight schema migration. Idempotent — NO-OP if columns exist.
     await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS schedule JSONB`
-    // Experience points for the leveling system. +5 per feedback, 30 per level.
     await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0`
 
-    const newIds = new Set(DEFAULT_MATES.map((m) => m.id))
+    // Per-user scoped mate ids. Default-pack mate `mate_default_classify`
+    // becomes `${userId}_mate_default_classify` for this user, so two users
+    // can both seed the pack without colliding on mates.id (PK).
+    const scopedId = (m: { id: string }) => `${userId}_${m.id}`
+    const newIds = new Set(DEFAULT_MATES.map(scopedId))
 
     // Soft-archive any default mates from prior seed versions that are no
-    // longer in the pack so the list stays clean.
+    // longer in the pack.
     const existing = await sql`
-      SELECT id FROM mates
-      WHERE user_id = ${DEFAULT_USER_ID} AND id LIKE 'mate_default_%'
+      SELECT id FROM mates WHERE user_id = ${userId}
     `
+    const prefix = `${userId}_mate_default_`
     let archived = 0
     for (const row of existing) {
       const id = row.id as string
-      if (!newIds.has(id)) {
+      if (id.startsWith(prefix) && !newIds.has(id)) {
         await sql`UPDATE mates SET is_recruited = false WHERE id = ${id}`
         archived++
       }
     }
 
-    // Upsert the current pack so refinements to system prompts / taglines /
+    // Upsert the current pack. Refinements to system prompts / taglines /
     // voice land for users who seeded an earlier version.
     for (const m of DEFAULT_MATES) {
+      const id = scopedId(m)
       await sql`
         INSERT INTO mates (
           id, user_id, name, archetype, avatar_shape, color, tagline,
           voice, system_prompt_template, tools, confidence_threshold,
           level, episode_count, status, on_active_squad, is_recruited
         ) VALUES (
-          ${m.id},
-          ${DEFAULT_USER_ID},
+          ${id},
+          ${userId},
           ${m.name},
           ${m.archetype},
           ${m.avatar_shape},
@@ -68,12 +74,11 @@ export async function POST() {
       `
     }
 
-    // Register starter pack on MuBit (idempotent in-runtime via internal
-    // Set; non-fatal if MUBIT_API_KEY isn't set or the call fails).
+    // Register starter pack on MuBit, scoped per user-mate.
     await Promise.all(
       DEFAULT_MATES.map((m) =>
         registerMateOnMubit({
-          id: m.id,
+          id: scopedId(m),
           name: m.name,
           archetype: m.archetype,
           tagline: m.tagline,

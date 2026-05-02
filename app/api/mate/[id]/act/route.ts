@@ -1,4 +1,5 @@
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 import { mateModel } from "@/lib/ai"
 import { getToolsForMate, getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
@@ -20,11 +21,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId()
     const { id } = await params
     const { messages, task }: { messages?: UIMessage[]; task?: string } = await request.json()
 
-    // Load mate
-    const mates = await sql`SELECT * FROM mates WHERE id = ${id}`
+    // Load mate (scoped to the authed user so one user can't drive
+    // another user's mate by guessing the id).
+    const mates = await sql`
+      SELECT * FROM mates WHERE id = ${id} AND user_id = ${userId}
+    `
     if (mates.length === 0) {
       return NextResponse.json({ error: "Mate not found" }, { status: 404 })
     }
@@ -50,7 +55,7 @@ export async function POST(
     let tools: ToolSet = {}
 
     if (toolkits.length > 0 && process.env.COMPOSIO_API_KEY) {
-      const toolResult = await getToolsForMate(mate, DEFAULT_USER_ID)
+      const toolResult = await getToolsForMate(mate, userId)
       if (toolResult?.tools) {
         tools = toolResult.tools as ToolSet
       }

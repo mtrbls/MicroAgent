@@ -1,4 +1,5 @@
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 import { forgeFinalModel } from "@/lib/ai"
 import { TOOLKIT_MAP } from "@/lib/mcp"
 import { registerMateOnMubit } from "@/lib/mubit"
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
   const { description } = await request.json()
 
   try {
+    const userId = await getUserId()
     // Step 1: Name + archetype. A mate does ONE specific action — name should
     // hint at the action, archetype anchors the domain.
     const step1 = await generateText({
@@ -140,8 +142,10 @@ Create:
 
     const { tagline, confidence_threshold, system_prompt_template } = step5.output
 
-    // Generate unique ID
-    const id = `mate_${name.toLowerCase()}_${Date.now().toString(36)}`
+    // Generate per-user unique ID. Prefix with userId so the mate row
+    // is unique across all users (mates.id is a primary key) and so the
+    // MuBit agent_id is auto-isolated by user.
+    const id = `${userId}_mate_${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}_${Date.now().toString(36)}`
 
     // Insert into database
     await sql`
@@ -151,7 +155,7 @@ Create:
         level, episode_count, status, on_active_squad, is_recruited
       ) VALUES (
         ${id},
-        ${DEFAULT_USER_ID},
+        ${userId},
         ${name},
         ${archetype},
         ${avatar_shape},

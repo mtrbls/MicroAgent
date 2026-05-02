@@ -1,12 +1,14 @@
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 import type { Mate } from "@/lib/types"
 import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
+    const userId = await getUserId()
     const rows = await sql`
       SELECT * FROM mates
-      WHERE user_id = ${DEFAULT_USER_ID} AND is_recruited = true
+      WHERE user_id = ${userId} AND is_recruited = true
       ORDER BY created_at DESC NULLS LAST, name ASC
     `
     return NextResponse.json({ mates: rows.map(mapMate) })

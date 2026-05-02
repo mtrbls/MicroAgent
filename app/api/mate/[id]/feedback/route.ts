@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { Client } from "@mubit-ai/sdk"
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 
 const XP_PER_FEEDBACK = 5
 const FIRST_LEVEL_XP = 5
@@ -11,6 +12,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId()
     const { id } = await params
     const body = (await request.json()) as {
       kind?: "verdict" | "lesson"
@@ -41,7 +43,7 @@ export async function POST(
               WHEN COALESCE(experience, 0) + ${XP_PER_FEEDBACK} < ${FIRST_LEVEL_XP} THEN 1
               ELSE FLOOR((COALESCE(experience, 0) + ${XP_PER_FEEDBACK} - ${FIRST_LEVEL_XP}) / ${XP_PER_LEVEL_AFTER}) + 2
             END
-        WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}
+        WHERE id = ${id} AND user_id = ${userId}
       `
 
       if (client) {

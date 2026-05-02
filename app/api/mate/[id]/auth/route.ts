@@ -1,4 +1,5 @@
-import { sql, DEFAULT_USER_ID } from "@/db"
+import { sql } from "@/db"
+import { getUserId } from "@/lib/auth"
 import { checkAuthStatus, getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
 import { NextResponse } from "next/server"
@@ -8,9 +9,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId()
     const { id } = await params
 
-    const mates = await sql`SELECT * FROM mates WHERE id = ${id}`
+    const mates = await sql`
+      SELECT * FROM mates WHERE id = ${id} AND user_id = ${userId}
+    `
     if (mates.length === 0) {
       return NextResponse.json({ error: "Mate not found" }, { status: 404 })
     }
@@ -33,7 +37,7 @@ export async function GET(
       )
     }
 
-    const result = await checkAuthStatus(mate, DEFAULT_USER_ID)
+    const result = await checkAuthStatus(mate, userId)
 
     if ("error" in result && result.error) {
       return NextResponse.json(
