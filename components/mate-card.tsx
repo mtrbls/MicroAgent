@@ -29,7 +29,7 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
         onKeyDown={(e) => {
           if (e.key === "Enter") onOpen()
         }}
-        className="relative h-full cursor-pointer rounded-none border-2 border-foreground bg-white text-left transition-transform duration-150 group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-active:translate-x-[4px] group-active:translate-y-[4px]"
+        className="relative h-full cursor-pointer rounded-none border-2 border-foreground bg-card text-left transition-transform duration-150 group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-active:translate-x-[4px] group-active:translate-y-[4px]"
       >
         <div className="flex h-full flex-col p-5">
           <div className="flex items-start gap-4">

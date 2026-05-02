@@ -1,10 +1,19 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Pixelify_Sans, Press_Start_2P } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const pixelify = Pixelify_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-pixel',
+})
+
+const pressStart = Press_Start_2P({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-display',
+})
 
 export const metadata: Metadata = {
   title: 'μAgent',
@@ -35,7 +44,10 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html
+      lang="en"
+      className={`${pixelify.variable} ${pressStart.variable} bg-background`}
+    >
       <body className="font-sans antialiased">
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}

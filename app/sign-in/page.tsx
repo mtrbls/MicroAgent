@@ -38,10 +38,7 @@ function SignInForm() {
 
   return (
     <main className="mx-auto mt-24 max-w-md px-4">
-      <h1 className="mb-1 text-2xl tracking-tight">
-        <span className="font-semibold">μ</span>
-        <span className="font-light">Agent</span>
-      </h1>
+      <h1 className="mb-1 font-display text-lg tracking-tight">μAGENT</h1>
       <p className="mb-6 text-sm text-foreground/70">Sign in to your account.</p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -53,7 +50,7 @@ function SignInForm() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full border-2 border-foreground bg-white px-3 py-2 text-sm focus:outline-none"
+            className="mt-1 w-full border-2 border-foreground bg-card px-3 py-2 text-sm focus:outline-none"
           />
         </label>
         <label className="block">
@@ -64,7 +61,7 @@ function SignInForm() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full border-2 border-foreground bg-white px-3 py-2 text-sm focus:outline-none"
+            className="mt-1 w-full border-2 border-foreground bg-card px-3 py-2 text-sm focus:outline-none"
           />
         </label>
 

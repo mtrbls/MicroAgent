@@ -65,7 +65,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
         aria-hidden
         className="pointer-events-none absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-none bg-foreground"
       />
-      <div className="relative overflow-hidden rounded-none border-2 border-foreground bg-white">
+      <div className="relative overflow-hidden rounded-none border-2 border-foreground bg-card">
         <div
           className={cn(
             "absolute inset-y-0 left-0 flex items-center gap-2 pl-5 text-white transition-colors",
@@ -81,7 +81,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
           type="button"
           {...handlers}
           onClick={handleClick}
-          className="relative flex w-full items-center gap-3 bg-white p-3 text-left transition-transform"
+          className="relative flex w-full items-center gap-3 bg-card p-3 text-left transition-transform"
           style={{
             transform: `translateX(${delta}px)`,
             transition: delta === 0 ? "transform 220ms ease-out" : undefined,

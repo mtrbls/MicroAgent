@@ -98,9 +98,8 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b-2 border-foreground bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl tracking-tight">
-              <span className="font-semibold text-foreground">μ</span>
-              <span className="font-light text-foreground">Agent</span>
+            <span className="font-display text-base tracking-tight text-foreground">
+              μAGENT
             </span>
             {mates.length > 0 && (
               <span className="text-xs tabular-nums text-muted-foreground">
