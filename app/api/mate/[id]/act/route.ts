@@ -1,6 +1,6 @@
 import { sql } from "@/db"
 import { mateModel } from "@/lib/ai"
-import { getMCPToolsForMate, getToolkitsForMate } from "@/lib/mcp"
+import { getToolsForMate, getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
 import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai"
 import { NextResponse } from "next/server"
@@ -50,21 +50,25 @@ Always stay in character. Be concise but helpful.`
 
     const startTime = Date.now()
 
-    // Get real MCP tools from Composio
+    // Get real tools from Composio session
     const toolkits = getToolkitsForMate(mate)
     let tools = {}
-    let mcpClient = null
 
     if (toolkits.length > 0 && process.env.COMPOSIO_API_KEY) {
       try {
-        const mcpResult = await getMCPToolsForMate(mate, "user_demo")
-        if (mcpResult) {
-          tools = mcpResult.tools
-          mcpClient = mcpResult.mcpClient
+        const toolResult = await getToolsForMate(mate, "user_demo")
+        if (toolResult?.requiresAuth) {
+          return NextResponse.json(
+            { error: "Authentication required", authUrl: toolResult.authUrl },
+            { status: 401 }
+          )
+        }
+        if (toolResult?.tools) {
+          tools = toolResult.tools
         }
       } catch (error) {
-        console.error("[v0] Failed to load MCP tools:", error)
-        // Continue without tools if MCP fails
+        console.error("[v0] Failed to load tools:", error)
+        // Continue without tools if loading fails
       }
     }
 
@@ -81,15 +85,6 @@ Always stay in character. Be concise but helpful.`
       stopWhen: stepCountIs(10),
       abortSignal: request.signal,
       async onFinish({ text }) {
-        // Close MCP client if we opened one
-        if (mcpClient) {
-          try {
-            await mcpClient.close()
-          } catch {
-            // Ignore close errors
-          }
-        }
-
         // Record episode
         const episodeId = `ep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
         const duration = Date.now() - startTime

@@ -1,12 +1,22 @@
 import { sql } from "@/db"
 import { getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
-import { Composio } from "@composio/core"
 import { NextResponse } from "next/server"
 
-const composio = new Composio({
-  apiKey: process.env.COMPOSIO_API_KEY,
-})
+// Use Composio REST API directly for more control
+const COMPOSIO_API = "https://api.composio.dev/api/v3"
+
+async function composioFetch(path: string, options: RequestInit = {}) {
+  const response = await fetch(`${COMPOSIO_API}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": process.env.COMPOSIO_API_KEY!,
+      ...options.headers,
+    },
+  })
+  return response.json()
+}
 
 export async function GET(
   request: Request,
@@ -24,7 +34,7 @@ export async function GET(
 
     // Check what toolkits are needed
     const toolkits = getToolkitsForMate(mate)
-    
+
     if (toolkits.length === 0) {
       return NextResponse.json({
         toolkits: [],
@@ -43,73 +53,61 @@ export async function GET(
       })
     }
 
-    // Build redirect URL for after OAuth
+    const userId = `user_demo_${mate.id}`
     const origin = request.headers.get("origin") || "http://localhost:3000"
     const redirectUrl = `${origin}/auth/callback?mate=${id}`
 
-    // Create session to check auth and get OAuth URLs
-    try {
-      const session = await composio.toolsets.createToolSet({
-        toolkits,
-        entityId: `user_demo_${mate.id}`,
-        config: {
-          redirectUrl,
-        },
-      })
+    // Check connection status for each toolkit
+    const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
+    let allConnected = true
 
-      // Build connections status per toolkit
-      const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
-      
-      // If session has an auth URL, user needs to connect
-      if (session.pendingAuthUrl) {
-        for (const tk of toolkits) {
-          connections[tk] = { connected: false, authUrl: session.pendingAuthUrl }
-        }
-        return NextResponse.json({
-          toolkits,
-          connections,
-          allConnected: false,
-          authUrl: session.pendingAuthUrl,
-        })
-      }
+    for (const toolkit of toolkits) {
+      try {
+        // Check if user has an active connection for this toolkit
+        const existingConnections = await composioFetch(
+          `/connectedAccounts?user_id=${encodeURIComponent(userId)}&toolkit=${toolkit}`
+        )
 
-      // All connected
-      for (const tk of toolkits) {
-        connections[tk] = { connected: true }
-      }
-      return NextResponse.json({
-        toolkits,
-        connections,
-        allConnected: true,
-      })
-    } catch (error: unknown) {
-      // Composio throws when auth is needed - extract the auth URL
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      
-      // Try to get auth URL from the error or create a new one
-      const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
-      
-      // Create individual auth URLs per toolkit
-      for (const tk of toolkits) {
-        try {
-          const authUrl = await composio.getExpectedParamsForUser({
-            toolkit: tk,
-            entityId: `user_demo_${mate.id}`,
-            redirectUrl,
+        console.log(`[v0] Composio existing connections for ${toolkit}:`, JSON.stringify(existingConnections))
+
+        const activeConnection = existingConnections?.items?.find(
+          (c: { status: string }) => c.status === "ACTIVE"
+        )
+
+        if (activeConnection) {
+          connections[toolkit] = { connected: true }
+        } else {
+          // Initiate a new connection to get OAuth URL
+          const newConnection = await composioFetch("/connectedAccounts", {
+            method: "POST",
+            body: JSON.stringify({
+              toolkit,
+              user_id: userId,
+              callback_url: redirectUrl,
+            }),
           })
-          connections[tk] = { connected: false, authUrl: authUrl.expectedParams?.redirectUrl || authUrl.authUrl }
-        } catch {
-          connections[tk] = { connected: false }
-        }
-      }
 
-      return NextResponse.json({
-        toolkits,
-        connections,
-        allConnected: false,
-        error: errorMessage,
-      })
+          console.log(`[v0] Composio new connection response for ${toolkit}:`, JSON.stringify(newConnection))
+
+          const authUrl = newConnection?.connection?.state?.authUri || 
+                         newConnection?.authUri || 
+                         newConnection?.redirectUrl
+
+          connections[toolkit] = { connected: false, authUrl }
+          allConnected = false
+        }
+      } catch (error) {
+        console.error(`[v0] Error checking ${toolkit}:`, error)
+        connections[toolkit] = { connected: false }
+        allConnected = false
+      }
     }
+
+    return NextResponse.json({
+      toolkits,
+      connections,
+      allConnected,
+    })
   } catch (error) {
     console.error("Error checking mate auth:", error)
     return NextResponse.json({ error: "Failed to check auth status" }, { status: 500 })
