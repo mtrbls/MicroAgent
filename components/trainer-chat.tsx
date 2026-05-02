@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Send, Bot, User, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MarkdownMessage } from "./markdown-message"
 
 interface TrainerChatProps {
   open: boolean
@@ -53,7 +54,7 @@ export function TrainerChat({ open, onOpenChange, onForgeRequested }: TrainerCha
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col sm:max-w-[50vw]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
@@ -105,7 +106,9 @@ export function TrainerChat({ open, onOpenChange, onForgeRequested }: TrainerCha
                 >
                   {(message.parts as Array<{ type: string; text?: string; state?: string; output?: unknown }> | undefined)?.map((part, index) => {
                     if (part.type === "text") {
-                      return (
+                      return message.role === "assistant" ? (
+                        <MarkdownMessage key={index}>{part.text ?? ""}</MarkdownMessage>
+                      ) : (
                         <p key={index} className="whitespace-pre-wrap text-sm">
                           {part.text}
                         </p>
