@@ -15,6 +15,7 @@ import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { useRef } from "react"
 import { Input } from "@/components/ui/input"
+import { MarkdownMessage } from "./markdown-message"
 
 interface MateDetailProps {
   mate: Mate | null
@@ -90,7 +91,7 @@ export function MateDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-lg">
+      <SheetContent className="flex w-full flex-col sm:max-w-[50vw]">
         <SheetHeader>
           <div className="flex items-start gap-4">
             <MateAvatar name={mate.name} color={mate.color} size="lg" />
@@ -146,14 +147,23 @@ export function MateDetail({
                             : "mr-8 bg-secondary text-secondary-foreground"
                         }`}
                       >
-                        {text}
+                        {msg.role === "assistant" ? (
+                          <MarkdownMessage>{text}</MarkdownMessage>
+                        ) : (
+                          <p className="whitespace-pre-wrap">{text}</p>
+                        )}
                       </div>
                     )
                   })
                 )}
-                {status === "streaming" && (
+                {(status === "submitted" ||
+                  (status === "streaming" &&
+                    messages[messages.length - 1]?.role !== "assistant")) && (
                   <div className="mr-8 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
-                    Thinking...
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
+                      Thinking...
+                    </span>
                   </div>
                 )}
               </div>
