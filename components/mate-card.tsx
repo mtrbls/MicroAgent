@@ -24,7 +24,7 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
         if (e.key === "Enter") onOpen()
       }}
       className={cn(
-        "group relative cursor-pointer border-2 border-foreground bg-white text-left transition-transform duration-150",
+        "group relative cursor-pointer rounded-xl border-2 border-foreground bg-white text-left transition-transform duration-150",
         "shadow-[6px_6px_0_0_var(--color-foreground)]",
         "hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[4px_4px_0_0_var(--color-foreground)]",
         "active:translate-x-[4px] active:translate-y-[4px] active:shadow-[2px_2px_0_0_var(--color-foreground)]",
@@ -62,7 +62,7 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
               e.stopPropagation()
               onLaunch()
             }}
-            className="rounded-none border-2 border-foreground"
+            className="rounded-lg border-2 border-foreground"
           >
             <Play className="mr-1.5 h-3.5 w-3.5 fill-current" />
             Launch

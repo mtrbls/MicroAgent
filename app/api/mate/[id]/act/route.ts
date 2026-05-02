@@ -2,7 +2,15 @@ import { sql, DEFAULT_USER_ID } from "@/db"
 import { mateModel } from "@/lib/ai"
 import { getToolsForMate, getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
-import { streamText, convertToModelMessages, UIMessage, stepCountIs, type ToolSet } from "ai"
+import {
+  streamText,
+  convertToModelMessages,
+  wrapLanguageModel,
+  UIMessage,
+  stepCountIs,
+  type ToolSet,
+} from "ai"
+import { mubitMemoryMiddleware } from "@mubit-ai/ai-sdk"
 import { NextResponse } from "next/server"
 
 export const maxDuration = 60
@@ -77,8 +85,27 @@ Stay in character. Be concise. One action per request — no multi-step side que
 
     await sql`UPDATE mates SET status = 'working' WHERE id = ${id}`
 
+    // Wrap the model with MuBit memory middleware so the agent learns over
+    // time: lessons relevant to this agent + query are auto-injected before
+    // the call, the interaction is captured after, and accumulated lessons
+    // shape future runs. No-op if MUBIT_API_KEY isn't set.
+    const model = process.env.MUBIT_API_KEY
+      ? wrapLanguageModel({
+          model: mateModel,
+          // The middleware works at runtime across AI SDK v4-v6, but its
+          // type doesn't yet include the v6 `specificationVersion` field.
+          // Cast through unknown to satisfy the v6 generic.
+          middleware: mubitMemoryMiddleware({
+            apiKey: process.env.MUBIT_API_KEY,
+            sessionId: `mate-${id}`,
+            agentId: id,
+            captureMode: "await",
+          }) as unknown as Parameters<typeof wrapLanguageModel>[0]["middleware"],
+        })
+      : mateModel
+
     const result = streamText({
-      model: mateModel,
+      model,
       system: systemPrompt,
       messages: modelMessages,
       tools,

@@ -7,7 +7,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'quickagent',
+  title: 'μAgent',
   description: 'Single-purpose AI agents you can launch in one tap',
   generator: 'v0.app',
   icons: {
