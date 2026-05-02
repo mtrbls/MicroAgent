@@ -71,6 +71,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         case "status":
           await sql`UPDATE mates SET status = ${raw as string} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
           break
+        case "schedule":
+          await sql`UPDATE mates SET schedule = ${raw === null ? null : JSON.stringify(raw)} WHERE id = ${id} AND user_id = ${DEFAULT_USER_ID}`
+          break
       }
     }
 

@@ -8,6 +8,7 @@ import { MateCard } from "@/components/mate-card"
 import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
 import { LaunchModal } from "@/components/launch-modal"
+import { McpSetupModal } from "@/components/mcp-setup-modal"
 import { Button } from "@/components/ui/button"
 import { Plus, RefreshCw } from "lucide-react"
 
@@ -26,6 +27,7 @@ export default function HomePage() {
   const [mateDetailOpen, setMateDetailOpen] = useState(false)
   const [launchMate, setLaunchMate] = useState<Mate | null>(null)
   const [forgeOpen, setForgeOpen] = useState(false)
+  const [mcpSetupMate, setMcpSetupMate] = useState<Mate | null>(null)
   const [seeding, setSeeding] = useState(false)
   const autoSeededRef = useRef(false)
 
@@ -56,8 +58,9 @@ export default function HomePage() {
     setMateDetailOpen(false)
   }, [])
 
-  const handleForgeComplete = useCallback(() => {
+  const handleForgeComplete = useCallback((mate: Mate) => {
     mutate("/api/squad")
+    setMcpSetupMate(mate)
   }, [])
 
   const handleSeedStarter = useCallback(async () => {
@@ -180,6 +183,14 @@ export default function HomePage() {
         open={forgeOpen}
         onOpenChange={setForgeOpen}
         onComplete={handleForgeComplete}
+      />
+
+      <McpSetupModal
+        mate={mcpSetupMate}
+        open={!!mcpSetupMate}
+        onOpenChange={(o) => {
+          if (!o) setMcpSetupMate(null)
+        }}
       />
     </main>
   )

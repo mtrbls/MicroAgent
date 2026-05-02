@@ -36,5 +36,6 @@ function mapMate(row: Record<string, unknown>): Mate {
     on_active_squad: row.on_active_squad as boolean,
     is_recruited: row.is_recruited as boolean,
     created_at: row.created_at as string,
+    schedule: (row.schedule as Mate["schedule"]) ?? null,
   }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import type { Mate, Episode } from "@/lib/types"
+import type { Mate, Episode, Schedule, ScheduleCadence } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
 import { EpisodeLog } from "./episode-log"
@@ -54,6 +54,9 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
   const [authLoading, setAuthLoading] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const chatScrollRef = useRef<HTMLDivElement>(null)
+  const [schedule, setSchedule] = useState<Schedule>(
+    mate.schedule ?? { cadence: "manual" }
+  )
 
   const { messages, sendMessage, status } = useChat({
     id: mate.id,
@@ -91,6 +94,17 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ confidence_threshold: value[0] }),
+    })
+  }
+
+  const persistSchedule = async (next: Schedule) => {
+    setSchedule(next)
+    await fetch(`/api/mate/${mate.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        schedule: next.cadence === "manual" ? null : next,
+      }),
     })
   }
 
@@ -246,6 +260,82 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="border-t border-border pt-6">
+              <h4 className="mb-3 text-sm font-medium text-foreground">Schedule</h4>
+              <div className="space-y-3">
+                <div className="grid gap-2">
+                  <label className="text-xs text-muted-foreground">Cadence</label>
+                  <select
+                    value={schedule.cadence}
+                    onChange={(e) => {
+                      const cadence = e.target.value as ScheduleCadence
+                      const next: Schedule =
+                        cadence === "manual"
+                          ? { cadence }
+                          : {
+                              cadence,
+                              time: schedule.time ?? "09:00",
+                              ...(cadence === "weekly"
+                                ? { day: schedule.day ?? 1 }
+                                : {}),
+                            }
+                      void persistSchedule(next)
+                    }}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="manual">Manual (no auto-run)</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="weekly">Weekly</option>
+                  </select>
+                </div>
+
+                {schedule.cadence !== "manual" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <label className="text-xs text-muted-foreground">Time</label>
+                      <input
+                        type="time"
+                        value={schedule.time ?? "09:00"}
+                        onChange={(e) =>
+                          void persistSchedule({ ...schedule, time: e.target.value })
+                        }
+                        className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      />
+                    </div>
+                    {schedule.cadence === "weekly" && (
+                      <div className="grid gap-2">
+                        <label className="text-xs text-muted-foreground">Day</label>
+                        <select
+                          value={schedule.day ?? 1}
+                          onChange={(e) =>
+                            void persistSchedule({
+                              ...schedule,
+                              day: Number(e.target.value),
+                            })
+                          }
+                          className="rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value={0}>Sunday</option>
+                          <option value={1}>Monday</option>
+                          <option value={2}>Tuesday</option>
+                          <option value={3}>Wednesday</option>
+                          <option value={4}>Thursday</option>
+                          <option value={5}>Friday</option>
+                          <option value={6}>Saturday</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {schedule.cadence === "manual"
+                    ? "This action only runs when you tap Launch."
+                    : "Schedules are saved here. Wire a Vercel cron to /api/cron/run to fire them automatically."}
+                </p>
+              </div>
             </div>
 
             <div className="border-t border-border pt-6">

@@ -4,6 +4,10 @@ import { NextResponse } from "next/server"
 
 export async function POST() {
   try {
+    // Lightweight schema migration: ensure the schedule column exists. Safe
+    // to run on every seed (NO-OP if it already exists).
+    await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS schedule JSONB`
+
     const newIds = new Set(DEFAULT_MATES.map((m) => m.id))
 
     // Soft-archive any default mates from prior seed versions that are no

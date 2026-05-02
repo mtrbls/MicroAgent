@@ -16,6 +16,16 @@ export type VoiceSpec = {
   forbidden_phrases: string[]
 }
 
+export type ScheduleCadence = "manual" | "daily" | "weekdays" | "weekly"
+
+export type Schedule = {
+  cadence: ScheduleCadence
+  /** Local time in HH:MM 24h, when cadence != "manual". */
+  time?: string
+  /** 0=Sun..6=Sat, when cadence == "weekly". */
+  day?: number
+}
+
 export type Mate = {
   id: string
   user_id: string
@@ -35,6 +45,7 @@ export type Mate = {
   on_active_squad: boolean
   is_recruited: boolean
   created_at: string
+  schedule?: Schedule | null
 }
 
 export type Episode = {
