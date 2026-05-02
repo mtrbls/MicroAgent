@@ -1,6 +1,6 @@
 import { sql } from "@/db"
 import { verifyPassword } from "@/lib/password"
-import { sessionCookieOptions, signSession } from "@/lib/cookie"
+import { createSession, ensureSessionsTable, sessionCookieOptions } from "@/lib/session"
 import { NextResponse } from "next/server"
 
 // Pre-computed bogus hash + salt of the same shape as a real one
@@ -44,9 +44,10 @@ export async function POST(request: Request) {
     }
     const row = rows[0]
 
-    const cookieValue = await signSession(row.id)
+    await ensureSessionsTable()
+    const token = await createSession(row.id)
     const res = NextResponse.json({ ok: true })
-    res.cookies.set({ ...sessionCookieOptions(), value: cookieValue })
+    res.cookies.set({ ...sessionCookieOptions(), value: token })
     return res
   } catch (err) {
     console.error("[sign-in] failed:", err)

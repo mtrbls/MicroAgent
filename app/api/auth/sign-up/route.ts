@@ -1,6 +1,6 @@
 import { sql } from "@/db"
 import { hashPassword } from "@/lib/password"
-import { sessionCookieOptions, signSession } from "@/lib/cookie"
+import { createSession, ensureSessionsTable, sessionCookieOptions } from "@/lib/session"
 import { NextResponse } from "next/server"
 
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT`
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`
     await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email)`
+    await ensureSessionsTable()
 
     const body = (await request.json()) as { email?: string; password?: string }
     const email = (body.email ?? "").trim().toLowerCase()
@@ -50,10 +51,11 @@ export async function POST(request: Request) {
       VALUES (${id}, ${email}, ${hash}, ${salt})
     `
 
-    // Auto sign-in: set session cookie so the user lands logged in.
-    const cookieValue = await signSession(id)
+    // Auto sign-in: create a session row and set the cookie to its
+    // opaque token. No HMAC, no shared secret.
+    const token = await createSession(id)
     const res = NextResponse.json({ ok: true, id })
-    res.cookies.set({ ...sessionCookieOptions(), value: cookieValue })
+    res.cookies.set({ ...sessionCookieOptions(), value: token })
     return res
   } catch (err) {
     console.error("[sign-up] failed:", err)

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { COOKIE_NAME, verifySession } from "@/lib/cookie"
+import { COOKIE_NAME, lookupSession } from "@/lib/session"
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg$|.*\\.png$).*)"],
@@ -16,8 +16,8 @@ const PUBLIC_PATHS = new Set([
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  const cookie = req.cookies.get(COOKIE_NAME)?.value
-  const userId = await verifySession(cookie)
+  const token = req.cookies.get(COOKIE_NAME)?.value
+  const userId = await lookupSession(token)
 
   if (PUBLIC_PATHS.has(pathname)) {
     // Already-signed-in users hitting /sign-in or /sign-up bounce home —
