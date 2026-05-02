@@ -4,83 +4,15 @@ import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
-    const mates = await sql`
-      SELECT * FROM mates 
+    const rows = await sql`
+      SELECT * FROM mates
       WHERE user_id = ${DEFAULT_USER_ID} AND is_recruited = true
-      ORDER BY on_active_squad DESC, name ASC
+      ORDER BY created_at DESC NULLS LAST, name ASC
     `
-
-    const activeSquad = mates.filter((m) => m.on_active_squad)
-    const bench = mates.filter((m) => !m.on_active_squad)
-
-    // Get roster (not yet recruited)
-    const roster = await sql`
-      SELECT * FROM mates 
-      WHERE user_id = ${DEFAULT_USER_ID} AND is_recruited = false
-      ORDER BY name ASC
-    `
-
-    return NextResponse.json({
-      activeSquad: activeSquad.map(mapMate),
-      bench: bench.map(mapMate),
-      roster: roster.map(mapMate),
-    })
+    return NextResponse.json({ mates: rows.map(mapMate) })
   } catch (error) {
-    console.error("Error fetching squad:", error)
-    return NextResponse.json({ error: "Failed to fetch squad" }, { status: 500 })
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const { action, mateId, inId, outId } = await request.json()
-
-    switch (action) {
-      case "recruit": {
-        await sql`
-          UPDATE mates 
-          SET is_recruited = true 
-          WHERE id = ${mateId} AND user_id = ${DEFAULT_USER_ID}
-        `
-        break
-      }
-      case "promote": {
-        // Check if squad is full (6 max)
-        const activeCount = await sql`
-          SELECT COUNT(*) as count FROM mates 
-          WHERE user_id = ${DEFAULT_USER_ID} AND on_active_squad = true
-        `
-        if (Number(activeCount[0].count) >= 6) {
-          return NextResponse.json({ error: "Squad is full (max 6)" }, { status: 400 })
-        }
-        await sql`
-          UPDATE mates 
-          SET on_active_squad = true 
-          WHERE id = ${mateId} AND user_id = ${DEFAULT_USER_ID}
-        `
-        break
-      }
-      case "demote": {
-        await sql`
-          UPDATE mates 
-          SET on_active_squad = false 
-          WHERE id = ${mateId} AND user_id = ${DEFAULT_USER_ID}
-        `
-        break
-      }
-      case "swap": {
-        await sql`UPDATE mates SET on_active_squad = false WHERE id = ${outId}`
-        await sql`UPDATE mates SET on_active_squad = true WHERE id = ${inId}`
-        break
-      }
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error("Error updating squad:", error)
-    return NextResponse.json({ error: "Failed to update squad" }, { status: 500 })
+    console.error("Error fetching mates:", error)
+    return NextResponse.json({ error: "Failed to fetch mates" }, { status: 500 })
   }
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Mate, Episode, MemoryFact } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
@@ -10,10 +10,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { ArrowUp, ArrowDown, Trash2, Link2, Check, ExternalLink, Send } from "lucide-react"
+import { Trash2, Link2, Check, ExternalLink, Send } from "lucide-react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
-import { useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { MarkdownMessage } from "./markdown-message"
 
@@ -21,8 +20,6 @@ interface MateDetailProps {
   mate: Mate | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onPromote?: (mateId: string) => void
-  onDemote?: (mateId: string) => void
   onArchive?: (mateId: string) => void
 }
 
@@ -32,14 +29,7 @@ interface MateDetailData {
   memoryFacts: MemoryFact[]
 }
 
-export function MateDetail({
-  mate,
-  open,
-  onOpenChange,
-  onPromote,
-  onDemote,
-  onArchive,
-}: MateDetailProps) {
+export function MateDetail({ mate, open, onOpenChange, onArchive }: MateDetailProps) {
   const [data, setData] = useState<MateDetailData | null>(null)
   const [loading, setLoading] = useState(false)
   const [confidenceThreshold, setConfidenceThreshold] = useState(mate?.confidence_threshold ?? 0.7)
@@ -47,7 +37,7 @@ export function MateDetail({
   const [authLoading, setAuthLoading] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const chatScrollRef = useRef<HTMLDivElement>(null)
-  
+
   const { messages, sendMessage, status } = useChat({
     id: mate?.id,
     transport: new DefaultChatTransport({ api: `/api/mate/${mate?.id}/act` }),
@@ -65,18 +55,20 @@ export function MateDetail({
         .catch(console.error)
         .finally(() => setLoading(false))
 
-      // Fetch auth status for connected apps
       setAuthLoading(true)
       fetch(`/api/mate/${mate.id}/auth`)
         .then((res) => res.json())
-        .then((d) => {
-          console.log("[v0] Auth response:", d)
-          setAuthStatus(d.connections || {})
-        })
+        .then((d) => setAuthStatus(d.connections || {}))
         .catch(console.error)
         .finally(() => setAuthLoading(false))
     }
   }, [mate?.id, open])
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    }
+  }, [messages])
 
   if (!mate) return null
 
@@ -91,7 +83,7 @@ export function MateDetail({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-[50vw]">
+      <SheetContent className="flex h-full w-full flex-col sm:max-w-[50vw]">
         <SheetHeader>
           <div className="flex items-start gap-4">
             <MateAvatar name={mate.name} color={mate.color} size="lg" />
@@ -106,7 +98,7 @@ export function MateDetail({
           </div>
         </SheetHeader>
 
-        <Tabs defaultValue="chat" className="mt-4 flex-1">
+        <Tabs defaultValue="chat" className="mt-4 flex min-h-0 flex-1 flex-col">
           <TabsList className="w-full">
             <TabsTrigger value="chat" className="flex-1">
               Chat
@@ -117,9 +109,6 @@ export function MateDetail({
             <TabsTrigger value="memory" className="flex-1">
               Memory
             </TabsTrigger>
-            <TabsTrigger value="voice" className="flex-1">
-              Voice
-            </TabsTrigger>
             <TabsTrigger value="connections" className="flex-1">
               Apps
             </TabsTrigger>
@@ -128,235 +117,168 @@ export function MateDetail({
             </TabsTrigger>
           </TabsList>
 
-          <div className="mt-4 flex-1 overflow-auto">
-            <TabsContent value="chat" className="m-0 flex h-[400px] flex-col">
-              <div ref={chatScrollRef} className="flex-1 overflow-y-auto space-y-3 pr-2">
-                {messages.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    Ask {mate.name} to do something...
-                  </p>
-                ) : (
-                  messages.map((msg) => {
-                    const text = msg.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text").map((p) => p.text).join("") || ""
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`rounded-lg px-3 py-2 text-sm ${
-                          msg.role === "user"
-                            ? "ml-8 bg-primary text-primary-foreground"
-                            : "mr-8 bg-secondary text-secondary-foreground"
-                        }`}
-                      >
-                        {msg.role === "assistant" ? (
-                          <MarkdownMessage>{text}</MarkdownMessage>
-                        ) : (
-                          <p className="whitespace-pre-wrap">{text}</p>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-                {(status === "submitted" ||
-                  (status === "streaming" &&
-                    messages[messages.length - 1]?.role !== "assistant")) && (
-                  <div className="mr-8 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
-                      Thinking...
-                    </span>
-                  </div>
-                )}
-              </div>
-              <form
-                className="mt-3 flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (chatInput.trim()) {
-                    sendMessage({ text: chatInput })
-                    setChatInput("")
-                  }
-                }}
-              >
-                <Input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder={`Message ${mate.name}...`}
-                  className="flex-1"
-                />
-                <Button type="submit" size="icon" disabled={status === "streaming"}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="activity" className="m-0">
-              {loading ? (
-                <div className="py-8 text-center text-muted-foreground">Loading...</div>
-              ) : (
-                <EpisodeLog episodes={data?.episodes || []} />
-              )}
-            </TabsContent>
-
-            <TabsContent value="memory" className="m-0">
-              {loading ? (
-                <div className="py-8 text-center text-muted-foreground">Loading...</div>
-              ) : (
-                <MemoryFacts facts={data?.memoryFacts || []} />
-              )}
-            </TabsContent>
-
-            <TabsContent value="voice" className="m-0">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-foreground">Register</h4>
-                  <p className="rounded-lg bg-secondary px-3 py-2 text-sm capitalize">
-                    {mate.voice.register}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-foreground">Signature Phrases</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {mate.voice.signature_phrases.map((phrase, i) => (
-                      <span
-                        key={i}
-                        className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary"
-                      >
-                        {phrase}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-foreground">Forbidden Phrases</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {mate.voice.forbidden_phrases.length > 0 ? (
-                      mate.voice.forbidden_phrases.map((phrase, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full bg-destructive/10 px-3 py-1 text-xs text-destructive"
-                        >
-                          {phrase}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm text-muted-foreground">None specified</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="connections" className="m-0">
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Connect apps to give {mate.name} real capabilities.
+          <TabsContent value="chat" className="m-0 mt-4 flex min-h-0 flex-1 flex-col">
+            <div ref={chatScrollRef} className="flex-1 space-y-3 overflow-y-auto pr-2">
+              {messages.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Ask {mate.name} to do something...
                 </p>
-                {authLoading ? (
-                  <div className="py-8 text-center text-muted-foreground">Loading...</div>
-                ) : Object.keys(authStatus).length === 0 ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    No apps configured for this mate.
-                  </div>
-                ) : (
-                  Object.entries(authStatus).map(([app, status]) => (
+              ) : (
+                messages.map((msg) => {
+                  const text =
+                    msg.parts
+                      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                      .map((p) => p.text)
+                      .join("\n\n") || ""
+                  return (
                     <div
-                      key={app}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                      key={msg.id}
+                      className={`rounded-lg px-3 py-2 text-sm ${
+                        msg.role === "user"
+                          ? "ml-8 bg-primary text-primary-foreground"
+                          : "mr-8 bg-secondary text-secondary-foreground"
+                      }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
-                          <Link2 className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium capitalize">{app.replace("_", " ")}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {status.connected ? "Connected" : "Not connected"}
-                          </p>
-                        </div>
-                      </div>
-                      {status.connected ? (
-                        <div className="flex items-center gap-1 text-sm text-green-600">
-                          <Check className="h-4 w-4" />
-                          Active
-                        </div>
+                      {msg.role === "assistant" ? (
+                        <MarkdownMessage>{text}</MarkdownMessage>
                       ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            console.log("[v0] Connect clicked, authUrl:", status.authUrl)
-                            if (status.authUrl) {
-                              window.open(status.authUrl, "_blank")
-                            } else {
-                              alert("No auth URL available - check console for API response")
-                            }
-                          }}
-                        >
-                          Connect
-                          <ExternalLink className="ml-1 h-3 w-3" />
-                        </Button>
+                        <p className="whitespace-pre-wrap">{text}</p>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="settings" className="m-0">
-              <div className="space-y-6">
-                <div>
-                  <h4 className="mb-3 text-sm font-medium text-foreground">
-                    Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
-                  </h4>
-                  <Slider
-                    value={[confidenceThreshold]}
-                    onValueChange={handleConfidenceChange}
-                    min={0.5}
-                    max={0.99}
-                    step={0.01}
-                    className="w-full"
-                  />
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Actions below this confidence will require approval
-                  </p>
+                  )
+                })
+              )}
+              {(status === "submitted" ||
+                (status === "streaming" &&
+                  messages[messages.length - 1]?.role !== "assistant")) && (
+                <div className="mr-8 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground" />
+                    Thinking...
+                  </span>
                 </div>
+              )}
+            </div>
+            <form
+              className="mt-3 flex gap-2 border-t border-border pt-3"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (chatInput.trim()) {
+                  sendMessage({ text: chatInput })
+                  setChatInput("")
+                }
+              }}
+            >
+              <Input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder={`Message ${mate.name}...`}
+                className="flex-1"
+              />
+              <Button type="submit" size="icon" disabled={status === "streaming"}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </TabsContent>
 
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-foreground">Squad Management</h4>
-                  {mate.on_active_squad ? (
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => onDemote?.(mate.id)}
-                    >
-                      <ArrowDown className="mr-2 h-4 w-4" />
-                      Move to Bench
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => onPromote?.(mate.id)}
-                    >
-                      <ArrowUp className="mr-2 h-4 w-4" />
-                      Add to Active Squad
-                    </Button>
-                  )}
+          <TabsContent value="activity" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground">Loading...</div>
+            ) : (
+              <EpisodeLog episodes={data?.episodes || []} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="memory" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
+            {loading ? (
+              <div className="py-8 text-center text-muted-foreground">Loading...</div>
+            ) : (
+              <MemoryFacts facts={data?.memoryFacts || []} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="connections" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Connect apps to give {mate.name} real capabilities.
+              </p>
+              {authLoading ? (
+                <div className="py-8 text-center text-muted-foreground">Loading...</div>
+              ) : Object.keys(authStatus).length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  No apps configured for this mate.
                 </div>
-
-                <div className="border-t border-border pt-4">
-                  <Button
-                    variant="destructive"
-                    className="w-full justify-start"
-                    onClick={() => onArchive?.(mate.id)}
+              ) : (
+                Object.entries(authStatus).map(([app, s]) => (
+                  <div
+                    key={app}
+                    className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Archive Mate
-                  </Button>
-                </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                        <Link2 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium capitalize">{app.replace("_", " ")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {s.connected ? "Connected" : "Not connected"}
+                        </p>
+                      </div>
+                    </div>
+                    {s.connected ? (
+                      <div className="flex items-center gap-1 text-sm text-green-600">
+                        <Check className="h-4 w-4" />
+                        Active
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (s.authUrl) window.open(s.authUrl, "_blank")
+                        }}
+                      >
+                        Connect
+                        <ExternalLink className="ml-1 h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="m-0 mt-4 min-h-0 flex-1 overflow-auto">
+            <div className="space-y-6">
+              <div>
+                <h4 className="mb-3 text-sm font-medium text-foreground">
+                  Confidence Threshold: {Math.round(confidenceThreshold * 100)}%
+                </h4>
+                <Slider
+                  value={[confidenceThreshold]}
+                  onValueChange={handleConfidenceChange}
+                  min={0.5}
+                  max={0.99}
+                  step={0.01}
+                  className="w-full"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Actions below this confidence will require approval
+                </p>
               </div>
-            </TabsContent>
-          </div>
+
+              <div className="border-t border-border pt-4">
+                <Button
+                  variant="destructive"
+                  className="w-full justify-start"
+                  onClick={() => onArchive?.(mate.id)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Archive Mate
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </SheetContent>
     </Sheet>
