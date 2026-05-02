@@ -14,17 +14,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // Idempotent schema bootstrap. First sign-up creates the table; subsequent
-    // sign-ups are no-ops on this statement.
-    await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        password_salt TEXT NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `
+    // Idempotent schema bootstrap. The table may already exist from a
+    // previous v0 deployment with a different column set, so we use
+    // additive ALTERs instead of relying on CREATE TABLE alone.
+    await sql`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT`
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`
+    await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email)`
 
     const body = (await request.json()) as { email?: string; password?: string }
     const email = (body.email ?? "").trim().toLowerCase()
