@@ -1,8 +1,8 @@
 import { sql } from "@/db"
 import { mateModel } from "@/lib/ai"
-import { stubMCPResponse } from "@/lib/mcp"
-import { streamText, tool, convertToModelMessages, UIMessage } from "ai"
-import { z } from "zod"
+import { getMCPToolsForMate, getToolkitsForMate } from "@/lib/mcp"
+import type { Mate } from "@/lib/types"
+import { streamText, convertToModelMessages, UIMessage, stepCountIs } from "ai"
 import { NextResponse } from "next/server"
 
 export const maxDuration = 60
@@ -20,7 +20,7 @@ export async function POST(
     if (mates.length === 0) {
       return NextResponse.json({ error: "Mate not found" }, { status: 404 })
     }
-    const mate = mates[0]
+    const mate = mates[0] as unknown as Mate
 
     // Load memory facts
     const memoryFacts = await sql`
@@ -50,22 +50,21 @@ Always stay in character. Be concise but helpful.`
 
     const startTime = Date.now()
 
-    // Define stub tools based on mate's tool bindings
-    const mateTools = (mate.tools as Array<{ mcp_server: string; scope: string[] }>)
-    const toolDefinitions: Record<string, ReturnType<typeof tool>> = {}
+    // Get real MCP tools from Composio
+    const toolkits = getToolkitsForMate(mate)
+    let tools = {}
+    let mcpClient = null
 
-    for (const binding of mateTools) {
-      for (const scope of binding.scope) {
-        const toolName = `${binding.mcp_server}_${scope}`
-        toolDefinitions[toolName] = tool({
-          description: `${binding.mcp_server} ${scope} operation`,
-          inputSchema: z.object({
-            query: z.string().optional().describe("Query or content for the operation"),
-          }),
-          execute: async (args) => {
-            return stubMCPResponse(toolName, args)
-          },
-        })
+    if (toolkits.length > 0 && process.env.COMPOSIO_API_KEY) {
+      try {
+        const mcpResult = await getMCPToolsForMate(mate, "user_demo")
+        if (mcpResult) {
+          tools = mcpResult.tools
+          mcpClient = mcpResult.mcpClient
+        }
+      } catch (error) {
+        console.error("[v0] Failed to load MCP tools:", error)
+        // Continue without tools if MCP fails
       }
     }
 
@@ -78,10 +77,19 @@ Always stay in character. Be concise but helpful.`
       model: mateModel,
       system: systemPrompt,
       messages: modelMessages,
-      tools: toolDefinitions,
-      maxSteps: 5,
+      tools,
+      stopWhen: stepCountIs(10),
       abortSignal: request.signal,
       async onFinish({ text }) {
+        // Close MCP client if we opened one
+        if (mcpClient) {
+          try {
+            await mcpClient.close()
+          } catch {
+            // Ignore close errors
+          }
+        }
+
         // Record episode
         const episodeId = `ep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
         const duration = Date.now() - startTime
