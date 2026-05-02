@@ -20,7 +20,7 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
       {/* Offset shadow plate (rounded) sits behind the square card. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-xl bg-foreground transition-transform duration-150 group-hover:translate-x-[4px] group-hover:translate-y-[4px] group-active:translate-x-[2px] group-active:translate-y-[2px]"
+        className="pointer-events-none absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-none bg-foreground transition-transform duration-150 group-hover:translate-x-[4px] group-hover:translate-y-[4px] group-active:translate-x-[2px] group-active:translate-y-[2px]"
       />
       <div
         role="button"

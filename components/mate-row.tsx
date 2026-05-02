@@ -61,7 +61,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
       {/* Offset shadow plate (rounded) sits behind the square row. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-xl bg-foreground"
+        className="pointer-events-none absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-none bg-foreground"
       />
       <div className="relative overflow-hidden rounded-none border-2 border-foreground bg-white">
         <div
