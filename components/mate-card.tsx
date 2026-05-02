@@ -31,7 +31,7 @@ export function MateCard({ mate, variant = "full", onClick, className }: MateCar
         )}
       >
         <div className="relative">
-          <MateAvatar shape={mate.avatar_shape} color={mate.color} size="sm" />
+          <MateAvatar name={mate.name} color={mate.color} size="sm" />
           <span
             className={cn(
               "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card",
@@ -61,7 +61,7 @@ export function MateCard({ mate, variant = "full", onClick, className }: MateCar
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <MateAvatar shape={mate.avatar_shape} color={mate.color} size="md" />
+            <MateAvatar name={mate.name} color={mate.color} size="md" />
             <span
               className={cn(
                 "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",

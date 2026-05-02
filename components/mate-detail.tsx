@@ -69,7 +69,7 @@ export function MateDetail({
       <SheetContent className="flex w-full flex-col sm:max-w-lg">
         <SheetHeader>
           <div className="flex items-start gap-4">
-            <MateAvatar shape={mate.avatar_shape} color={mate.color} size="lg" />
+            <MateAvatar name={mate.name} color={mate.color} size="lg" />
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <SheetTitle>{mate.name}</SheetTitle>

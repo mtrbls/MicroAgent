@@ -122,7 +122,7 @@ export function ForgeFlow({ open, onOpenChange, initialDescription = "", onCompl
           <div className="space-y-4">
             <div className="flex items-start gap-4 rounded-lg border border-border bg-secondary/30 p-4">
               <MateAvatar
-                shape={result.avatar_shape!}
+                name={result.name!}
                 color={result.color!}
                 size="lg"
               />
