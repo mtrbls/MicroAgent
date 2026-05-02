@@ -91,7 +91,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/30 bg-background/70 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b-2 border-foreground bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
           <div className="flex items-baseline gap-2">
             <span className="text-2xl tracking-tight">
@@ -118,7 +118,7 @@ export default function HomePage() {
             <Button
               size="sm"
               onClick={() => setForgeOpen(true)}
-              className="rounded-full"
+              className="rounded-none border-2 border-foreground"
             >
               <Plus className="mr-1.5 h-4 w-4" />
               New
