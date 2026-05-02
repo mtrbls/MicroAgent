@@ -9,7 +9,7 @@ import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
 import { LaunchModal } from "@/components/launch-modal"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Sparkles } from "lucide-react"
+import { MessageSquare, Sparkles, RefreshCw } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -84,6 +84,15 @@ export default function HomePage() {
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
           <span className="text-xl font-bold text-foreground">Mates</span>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Refresh starter pack"
+              onClick={handleSeedStarter}
+              disabled={seeding}
+            >
+              <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setForgeOpen(true)}>
               <Sparkles className="mr-2 h-4 w-4" />
               Forge

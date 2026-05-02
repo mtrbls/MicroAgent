@@ -18,17 +18,24 @@ interface ForgeFlowProps {
 
 const EXAMPLES: { label: string; description: string }[] = [
   {
-    label: "🧹 Delete promo emails",
-    description: "Sweep my Gmail inbox and delete promotional emails older than 7 days.",
-  },
-  {
-    label: "🧾 Label invoices",
-    description: "Find invoice and receipt emails in Gmail and apply the 'Invoices' label.",
-  },
-  {
-    label: "📨 Auto-reply to recruiters",
+    label: "📩 Brief my inbox",
     description:
-      "Detect recruiter emails in Gmail and send a polite, standard 'not currently looking' reply.",
+      "Quick triage of my Gmail: group the last 24-48h into urgent, FYI, and promo. Read-only.",
+  },
+  {
+    label: "📅 Today's meetings",
+    description:
+      "Brief me on today's Google Calendar with times, attendees, and a one-line prep note per meeting.",
+  },
+  {
+    label: "✍️ Draft pending replies",
+    description:
+      "Find emails sent to me that are waiting on a reply (>1 day) and draft a short response for each. Don't send.",
+  },
+  {
+    label: "🗓️ Find a 30-min slot",
+    description:
+      "Find free 30-min slots on my calendar in the next 5 business days, 9am-6pm local.",
   },
   {
     label: "🎯 Block focus time",
@@ -36,24 +43,19 @@ const EXAMPLES: { label: string; description: string }[] = [
       "Each weekday morning, block 90 min of 'Deep Focus' on my Google Calendar before the first meeting.",
   },
   {
-    label: "🗓️ Find a meeting slot",
+    label: "🧹 Delete promo emails",
     description:
-      "When asked, find a free 30-min slot on my calendar within the next 5 business days.",
+      "Sweep my Gmail and delete promotional emails older than 7 days. Confirm count before deleting.",
   },
   {
-    label: "🐛 Triage GitHub issues",
+    label: "🧾 Label invoices",
     description:
-      "Read new issues on a given GitHub repo and suggest labels (bug / feature / question).",
+      "Find invoice and receipt emails from the last 90 days and apply the 'Tax-Receipts' label in Gmail.",
   },
   {
-    label: "📰 Daily news digest",
+    label: "🔍 Quick web answer",
     description:
-      "When asked for 'today's digest', search the web for top headlines on my saved topics and summarize.",
-  },
-  {
-    label: "📝 Capture journal note",
-    description:
-      "Append a timestamped entry I dictate to my Notion 'Journal' page.",
+      "When I ask a question, search the web and return a short paragraph synthesis with sources.",
   },
 ]
 
