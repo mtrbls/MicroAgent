@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
-import { Loader2, Sparkles, Check } from "lucide-react"
+import { Loader2, Plus, Check } from "lucide-react"
 import type { Mate } from "@/lib/types"
 
 interface ForgeFlowProps {
@@ -113,8 +113,8 @@ export function ForgeFlow({ open, onOpenChange, initialDescription = "", onCompl
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            Forge New Mate
+            <Plus className="h-5 w-5 text-foreground/80" />
+            New agent
           </DialogTitle>
         </DialogHeader>
 
@@ -168,12 +168,12 @@ export function ForgeFlow({ open, onOpenChange, initialDescription = "", onCompl
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Forging...
+                    Creating...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Forge
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create
                   </>
                 )}
               </Button>

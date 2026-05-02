@@ -5,12 +5,11 @@ import useSWR, { mutate } from "swr"
 import type { Mate } from "@/lib/types"
 import { MateRow } from "@/components/mate-row"
 import { MateCard } from "@/components/mate-card"
-import { TrainerChat } from "@/components/trainer-chat"
 import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
 import { LaunchModal } from "@/components/launch-modal"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Sparkles, RefreshCw } from "lucide-react"
+import { Plus, RefreshCw } from "lucide-react"
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -26,9 +25,7 @@ export default function HomePage() {
   const [selectedMate, setSelectedMate] = useState<Mate | null>(null)
   const [mateDetailOpen, setMateDetailOpen] = useState(false)
   const [launchMate, setLaunchMate] = useState<Mate | null>(null)
-  const [trainerOpen, setTrainerOpen] = useState(false)
   const [forgeOpen, setForgeOpen] = useState(false)
-  const [forgeDescription, setForgeDescription] = useState("")
   const [seeding, setSeeding] = useState(false)
   const autoSeededRef = useRef(false)
 
@@ -61,12 +58,6 @@ export default function HomePage() {
 
   const handleForgeComplete = useCallback(() => {
     mutate("/api/squad")
-    setForgeDescription("")
-  }, [])
-
-  const handleForgeRequested = useCallback((description: string) => {
-    setForgeDescription(description)
-    setForgeOpen(true)
   }, [])
 
   const handleSeedStarter = useCallback(async () => {
@@ -119,21 +110,12 @@ export default function HomePage() {
               <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />
             </Button>
             <Button
-              variant="outline"
               size="sm"
               onClick={() => setForgeOpen(true)}
               className="rounded-full"
             >
-              <Sparkles className="mr-1.5 h-4 w-4" />
-              Forge
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setTrainerOpen(true)}
-              className="rounded-full"
-            >
-              <MessageSquare className="mr-1.5 h-4 w-4" />
-              Trainer
+              <Plus className="mr-1.5 h-4 w-4" />
+              New
             </Button>
           </div>
         </div>
@@ -177,12 +159,6 @@ export default function HomePage() {
         )}
       </div>
 
-      <TrainerChat
-        open={trainerOpen}
-        onOpenChange={setTrainerOpen}
-        onForgeRequested={handleForgeRequested}
-      />
-
       <MateDetail
         mate={selectedMate}
         open={mateDetailOpen}
@@ -203,7 +179,6 @@ export default function HomePage() {
       <ForgeFlow
         open={forgeOpen}
         onOpenChange={setForgeOpen}
-        initialDescription={forgeDescription}
         onComplete={handleForgeComplete}
       />
     </main>
