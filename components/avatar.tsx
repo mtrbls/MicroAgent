@@ -16,7 +16,7 @@ const sizeClasses = {
 }
 
 export function MateAvatar({ name, color, size = "md", className = "" }: MateAvatarProps) {
-  const initial = name.charAt(0).toUpperCase()
+  const initial = name?.charAt(0)?.toUpperCase() || "?"
 
   return (
     <div
