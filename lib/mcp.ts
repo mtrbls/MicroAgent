@@ -88,17 +88,22 @@ export async function checkAuthStatus(mate: Mate, userId: string) {
     const session = await composio.create(entityId)
     
     for (const toolkit of toolkits) {
+      // Always get auth URL first - Composio will tell us if connected or not
       try {
-        // Try to get tools - if it works, we're connected
-        await session.tools({ toolkits: [toolkit] })
-        connections[toolkit.toLowerCase()] = { connected: true }
-      } catch {
-        // Need auth - get the URL
-        try {
-          const authUrl = await session.getAuthUrl(toolkit)
+        const authUrl = await session.getAuthUrl(toolkit)
+        // If we get an auth URL, user needs to connect
+        if (authUrl) {
           connections[toolkit.toLowerCase()] = { connected: false, authUrl }
-        } catch (urlError) {
-          console.error(`[v0] Error getting auth URL for ${toolkit}:`, urlError)
+        } else {
+          connections[toolkit.toLowerCase()] = { connected: true }
+        }
+      } catch (error) {
+        // getAuthUrl throws if already connected (no auth needed)
+        const errMsg = error instanceof Error ? error.message : String(error)
+        if (errMsg.includes("already") || errMsg.includes("connected") || errMsg.includes("exists")) {
+          connections[toolkit.toLowerCase()] = { connected: true }
+        } else {
+          console.error(`[v0] Error getting auth URL for ${toolkit}:`, error)
           connections[toolkit.toLowerCase()] = { connected: false }
         }
       }
