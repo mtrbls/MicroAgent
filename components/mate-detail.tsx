@@ -57,7 +57,10 @@ export function MateDetail({
       setAuthLoading(true)
       fetch(`/api/mate/${mate.id}/auth`)
         .then((res) => res.json())
-        .then((d) => setAuthStatus(d.connections || {}))
+        .then((d) => {
+          console.log("[v0] Auth response:", d)
+          setAuthStatus(d.connections || {})
+        })
         .catch(console.error)
         .finally(() => setAuthLoading(false))
     }
@@ -201,17 +204,22 @@ export function MateDetail({
                           <Check className="h-4 w-4" />
                           Active
                         </div>
-                      ) : status.authUrl ? (
+                      ) : (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(status.authUrl, "_blank")}
+                          onClick={() => {
+                            console.log("[v0] Connect clicked, authUrl:", status.authUrl)
+                            if (status.authUrl) {
+                              window.open(status.authUrl, "_blank")
+                            } else {
+                              alert("No auth URL available - check console for API response")
+                            }
+                          }}
                         >
                           Connect
                           <ExternalLink className="ml-1 h-3 w-3" />
                         </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Setup required</span>
                       )}
                     </div>
                   ))
