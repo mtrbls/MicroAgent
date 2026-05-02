@@ -35,7 +35,7 @@ export function ActiveSquad({ mates, onMateClick, onEmptySlotClick }: ActiveSqua
           >
             {mate ? (
               <>
-                <MateAvatar shape={mate.avatar_shape} color={mate.color} size="md" />
+                <MateAvatar name={mate.name} color={mate.color} size="md" />
                 <span className="mt-2 truncate text-xs font-medium text-foreground">
                   {mate.name}
                 </span>
