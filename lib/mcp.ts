@@ -3,13 +3,51 @@ import { VercelProvider } from "@composio/vercel"
 import type { Mate, ToolBinding } from "./types"
 
 // Map our internal mcp_server names to Composio toolkit slugs (lowercase).
+// The forge LLM picks from these keys; the value is what Composio expects.
+// Add more as you find users asking for them — Composio supports 250+.
 export const TOOLKIT_MAP: Record<string, string> = {
+  // Email + calendar
   gmail: "gmail",
   calendar: "googlecalendar",
-  "web-search": "serpapi",
-  github: "github",
-  slack: "slack",
+  outlook: "outlook",
+  // Docs + storage
   notion: "notion",
+  docs: "googledocs",
+  sheets: "googlesheets",
+  drive: "googledrive",
+  airtable: "airtable",
+  // Comms
+  slack: "slack",
+  discord: "discord",
+  twilio: "twilio",
+  // Dev
+  github: "github",
+  gitlab: "gitlab",
+  linear: "linear",
+  jira: "jira",
+  // Project / tasks
+  asana: "asana",
+  trello: "trello",
+  clickup: "clickup",
+  // CRM / support
+  hubspot: "hubspot",
+  salesforce: "salesforce",
+  intercom: "intercom",
+  zendesk: "zendesk",
+  // Money
+  stripe: "stripe",
+  shopify: "shopify",
+  // Scheduling
+  zoom: "zoom",
+  calendly: "calendly",
+  // Social
+  twitter: "twitter",
+  linkedin: "linkedin",
+  reddit: "reddit",
+  youtube: "youtube",
+  // Web
+  "web-search": "serpapi",
+  firecrawl: "firecrawl",
 }
 
 export type ToolkitConnection = { connected: boolean; authUrl?: string }
