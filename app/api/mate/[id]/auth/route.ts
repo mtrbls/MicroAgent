@@ -3,22 +3,8 @@ import { getToolkitsForMate } from "@/lib/mcp"
 import type { Mate } from "@/lib/types"
 import { NextResponse } from "next/server"
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-
-// Map toolkit names to Google OAuth scopes
-const TOOLKIT_SCOPES: Record<string, string[]> = {
-  gmail: [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/gmail.compose",
-    "https://www.googleapis.com/auth/gmail.modify",
-  ],
-  googlecalendar: [
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/calendar.events",
-  ],
-}
+const COMPOSIO_API_KEY = process.env.COMPOSIO_API_KEY
+const COMPOSIO_BASE = "https://backend.composio.dev/api/v1"
 
 export async function GET(
   request: Request,
@@ -45,71 +31,118 @@ export async function GET(
       })
     }
 
-    // Check if Google OAuth is configured
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      const connections: Record<string, { connected: boolean; needsSetup: boolean }> = {}
-      for (const toolkit of toolkits) {
-        connections[toolkit] = { connected: false, needsSetup: true }
-      }
+    if (!COMPOSIO_API_KEY) {
       return NextResponse.json({
         toolkits,
-        connections,
+        connections: {},
         allConnected: false,
-        error: "Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable OAuth",
+        error: "COMPOSIO_API_KEY not configured",
       })
     }
 
-    // Check for existing valid token
-    const tokens = await sql`
-      SELECT * FROM oauth_tokens 
-      WHERE user_id = 'user_demo' 
-      AND provider = 'google'
-      AND expires_at > NOW()
-    `
-    const hasValidToken = tokens.length > 0
-
-    // Build OAuth URL if needed
+    const userId = "user_demo"
     const origin = request.headers.get("origin") || "http://localhost:3000"
-    const redirectUri = `${origin}/api/auth/google/callback`
-    
-    // Collect all required scopes
-    const allScopes = ["openid", "email", "profile"]
-    for (const toolkit of toolkits) {
-      allScopes.push(...(TOOLKIT_SCOPES[toolkit] || []))
-    }
-    
-    const state = Buffer.from(JSON.stringify({ mateId: id, userId: "user_demo" })).toString("base64")
-    const authUrl = hasValidToken ? undefined : buildGoogleAuthUrl([...new Set(allScopes)], redirectUri, state)
-
-    // Build connections response
     const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
+
     for (const toolkit of toolkits) {
-      connections[toolkit] = {
-        connected: hasValidToken,
-        authUrl,
+      try {
+        // Check existing connections for this user + app
+        const connectionsRes = await fetch(
+          `${COMPOSIO_BASE}/connectedAccounts?user_uuid=${userId}&showActiveOnly=true`,
+          {
+            headers: { "x-api-key": COMPOSIO_API_KEY },
+          }
+        )
+
+        if (!connectionsRes.ok) {
+          const errorText = await connectionsRes.text()
+          console.error(`[v0] Composio connections error for ${toolkit}:`, connectionsRes.status, errorText)
+          
+          // Check if it's a network error (sandbox restriction)
+          if (errorText.includes("ENOTFOUND") || errorText.includes("network")) {
+            connections[toolkit] = { 
+              connected: false, 
+              authUrl: undefined,
+            }
+            continue
+          }
+          
+          connections[toolkit] = { connected: false }
+          continue
+        }
+
+        const connectionsData = await connectionsRes.json()
+        const existingConnection = connectionsData.items?.find(
+          (c: { appName: string }) => c.appName.toLowerCase() === toolkit.toLowerCase()
+        )
+
+        if (existingConnection) {
+          connections[toolkit] = { connected: true }
+        } else {
+          // Initiate new connection
+          const initiateRes = await fetch(`${COMPOSIO_BASE}/connectedAccounts`, {
+            method: "POST",
+            headers: {
+              "x-api-key": COMPOSIO_API_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              integrationId: toolkit,
+              userUuid: userId,
+              redirectUri: `${origin}/api/auth/callback`,
+            }),
+          })
+
+          if (!initiateRes.ok) {
+            const errorText = await initiateRes.text()
+            console.error(`[v0] Composio initiate error for ${toolkit}:`, initiateRes.status, errorText)
+            connections[toolkit] = { connected: false }
+            continue
+          }
+
+          const initiateData = await initiateRes.json()
+          connections[toolkit] = {
+            connected: false,
+            authUrl: initiateData.redirectUrl || initiateData.connectionStatus?.redirectUrl,
+          }
+        }
+      } catch (error) {
+        console.error(`[v0] Error checking ${toolkit}:`, error)
+        
+        // Check if it's a network restriction (sandbox)
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        if (errorMsg.includes("ENOTFOUND") || errorMsg.includes("getaddrinfo")) {
+          return NextResponse.json({
+            toolkits,
+            connections: {},
+            allConnected: false,
+            error: "Cannot reach Composio from v0 preview. Deploy to Vercel to enable OAuth.",
+            sandboxRestriction: true,
+          })
+        }
+        
+        connections[toolkit] = { connected: false }
       }
     }
+
+    const allConnected = Object.values(connections).every((c) => c.connected)
 
     return NextResponse.json({
       toolkits,
       connections,
-      allConnected: hasValidToken,
+      allConnected,
     })
   } catch (error) {
-    console.error("Error checking mate auth:", error)
+    console.error("[v0] Auth route error:", error)
+    
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (errorMsg.includes("ENOTFOUND") || errorMsg.includes("getaddrinfo")) {
+      return NextResponse.json({
+        error: "Cannot reach Composio from v0 preview. Deploy to Vercel to enable OAuth.",
+        sandboxRestriction: true,
+      })
+    }
+    
     return NextResponse.json({ error: "Failed to check auth status" }, { status: 500 })
   }
-}
-
-function buildGoogleAuthUrl(scopes: string[], redirectUri: string, state: string): string {
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID!,
-    redirect_uri: redirectUri,
-    response_type: "code",
-    scope: scopes.join(" "),
-    access_type: "offline",
-    prompt: "consent",
-    state,
-  })
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
 }
