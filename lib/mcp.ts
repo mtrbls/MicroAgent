@@ -1,117 +1,90 @@
 import { Composio } from "@composio/core"
 import { VercelProvider } from "@composio/vercel"
-import type { Mate, MCPToolBinding } from "./types"
+import type { Mate, ToolBinding } from "./types"
 
-// Map our internal tool names to Composio toolkit slugs
-const TOOLKIT_MAP: Record<string, string> = {
-  gmail: "GMAIL",
-  calendar: "GOOGLECALENDAR",
-  "web-search": "SERPAPI",
-  github: "GITHUB",
+// Map our internal mcp_server names to Composio toolkit slugs (lowercase).
+export const TOOLKIT_MAP: Record<string, string> = {
+  gmail: "gmail",
+  calendar: "googlecalendar",
+  "web-search": "serpapi",
+  github: "github",
+  slack: "slack",
+  notion: "notion",
 }
 
-// Get the toolkits a mate needs based on their tool bindings
+export type ToolkitConnection = { connected: boolean; authUrl?: string }
+
 export function getToolkitsForMate(mate: Mate): string[] {
   const toolkits = new Set<string>()
-  const bindings = mate.tools as MCPToolBinding[]
-
+  const bindings = (mate.tools ?? []) as ToolBinding[]
   for (const binding of bindings) {
     const toolkit = TOOLKIT_MAP[binding.mcp_server]
-    if (toolkit) {
-      toolkits.add(toolkit)
-    }
+    if (toolkit) toolkits.add(toolkit)
   }
-
   return Array.from(toolkits)
 }
 
-// Create a Composio client with VercelProvider
 function getComposio() {
   const apiKey = process.env.COMPOSIO_API_KEY
-  if (!apiKey) {
-    console.log("[v0] COMPOSIO_API_KEY not set")
-    return null
-  }
-  return new Composio({ 
-    apiKey,
-    baseURL: "https://backend.composio.dev",
-    provider: new VercelProvider() 
-  })
+  if (!apiKey) return null
+  return new Composio({ apiKey, provider: new VercelProvider() })
 }
 
-// Create a session for a user/mate and get tools
-export async function getToolsForMate(mate: Mate, userId: string) {
+async function createSession(mate: Mate, userId: string) {
   const composio = getComposio()
   if (!composio) return null
-
   const toolkits = getToolkitsForMate(mate)
   if (toolkits.length === 0) return null
+  const session = await composio.create(userId, { toolkits })
+  return { session, toolkits }
+}
 
-  const entityId = `${userId}_${mate.id}`
-
+// Returns AI-SDK-shaped tools for a mate. Returns empty when no toolkits or
+// no API key configured. Errors fall back to no tools so chat still works.
+export async function getToolsForMate(mate: Mate, userId: string) {
   try {
-    const session = await composio.create(entityId)
-    const tools = await session.tools({ toolkits })
-    
-    return { requiresAuth: false, authUrl: null, tools }
-  } catch (error: unknown) {
-    console.error("[v0] Composio getTools error:", error)
-    
-    // Check if this is an auth required error
-    const errMsg = error instanceof Error ? error.message : String(error)
-    if (errMsg.includes("auth") || errMsg.includes("connect") || errMsg.includes("No connected account")) {
-      try {
-        const session = await composio.create(entityId)
-        const authUrl = await session.getAuthUrl(toolkits[0])
-        return { requiresAuth: true, authUrl, tools: null }
-      } catch (authError) {
-        console.error("[v0] Error getting auth URL:", authError)
-      }
-    }
-    
+    const created = await createSession(mate, userId)
+    if (!created) return null
+    const tools = await created.session.tools()
+    return { tools, toolkits: created.toolkits }
+  } catch (error) {
+    console.error("[mcp] getToolsForMate failed:", error)
     return null
   }
 }
 
-// Check auth status and get auth URL if needed
+// Inspect connection state for the mate's toolkits and produce auth URLs
+// for any not yet connected.
 export async function checkAuthStatus(mate: Mate, userId: string) {
   const composio = getComposio()
-  if (!composio) return { error: "COMPOSIO_API_KEY not configured" }
+  if (!composio) return { error: "COMPOSIO_API_KEY not configured" as const }
 
   const toolkits = getToolkitsForMate(mate)
-  if (toolkits.length === 0) return { connections: {} }
-
-  const entityId = `${userId}_${mate.id}`
-  const connections: Record<string, { connected: boolean; authUrl?: string }> = {}
+  if (toolkits.length === 0) return { connections: {} as Record<string, ToolkitConnection> }
 
   try {
-    const session = await composio.create(entityId)
-    
-    for (const toolkit of toolkits) {
-      // Always get auth URL first - Composio will tell us if connected or not
+    const session = await composio.create(userId, { toolkits })
+    const status = await session.toolkits()
+
+    const connections: Record<string, ToolkitConnection> = {}
+    for (const item of status.items) {
+      const slug = item.slug.toLowerCase()
+      const isConnected = item.connection?.isActive === true || item.isNoAuth === true
+      if (isConnected) {
+        connections[slug] = { connected: true }
+        continue
+      }
       try {
-        const authUrl = await session.getAuthUrl(toolkit)
-        // If we get an auth URL, user needs to connect
-        if (authUrl) {
-          connections[toolkit.toLowerCase()] = { connected: false, authUrl }
-        } else {
-          connections[toolkit.toLowerCase()] = { connected: true }
-        }
-      } catch (error) {
-        // getAuthUrl throws if already connected (no auth needed)
-        const errMsg = error instanceof Error ? error.message : String(error)
-        if (errMsg.includes("already") || errMsg.includes("connected") || errMsg.includes("exists")) {
-          connections[toolkit.toLowerCase()] = { connected: true }
-        } else {
-          console.error(`[v0] Error getting auth URL for ${toolkit}:`, error)
-          connections[toolkit.toLowerCase()] = { connected: false }
-        }
+        const req = await session.authorize(item.slug)
+        connections[slug] = { connected: false, authUrl: req.redirectUrl ?? undefined }
+      } catch (err) {
+        console.error(`[mcp] authorize failed for ${item.slug}:`, err)
+        connections[slug] = { connected: false }
       }
     }
-    
     return { connections }
   } catch (error) {
-    console.error("[v0] Error checking auth status:", error)
-    return { error: String(error) }
+    console.error("[mcp] checkAuthStatus failed:", error)
+    return { error: error instanceof Error ? error.message : String(error) }
   }
 }

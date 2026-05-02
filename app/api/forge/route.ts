@@ -1,5 +1,6 @@
 import { sql, DEFAULT_USER_ID } from "@/db"
 import { forgeFinalModel } from "@/lib/ai"
+import { TOOLKIT_MAP } from "@/lib/mcp"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 import { NextResponse } from "next/server"
@@ -9,6 +10,7 @@ export const maxDuration = 60
 const AVATAR_SHAPES = ["circle", "hexagon", "triangle", "square", "diamond", "oval"] as const
 const ARCHETYPES = ["correspondence", "scheduler", "research", "money", "health", "memory", "code", "deals", "custom"] as const
 const REGISTERS = ["formal", "casual", "terse", "warm"] as const
+const MCP_SERVERS = Object.keys(TOOLKIT_MAP) as [string, ...string[]]
 
 export async function POST(request: Request) {
   const { description } = await request.json()
@@ -89,7 +91,7 @@ List only the ones that make sense for this assistant.`,
         schema: z.object({
           tools: z.array(
             z.object({
-              mcp_server: z.string(),
+              mcp_server: z.enum(MCP_SERVERS),
               scope: z.array(z.string()),
             })
           ),
@@ -97,10 +99,9 @@ List only the ones that make sense for this assistant.`,
       }),
     })
 
-    const tools = step4.output.tools.map((t) => ({
-      ...t,
-      mcp_url: `https://mcp.vercel.com/${t.mcp_server}`,
-    }))
+    const tools = step4.output.tools
+      .filter((t) => t.mcp_server in TOOLKIT_MAP)
+      .map((t) => ({ ...t, mcp_url: `composio://${TOOLKIT_MAP[t.mcp_server]}` }))
 
     // Step 5: System prompt + tagline + confidence
     const step5 = await generateText({

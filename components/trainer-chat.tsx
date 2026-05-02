@@ -30,16 +30,15 @@ export function TrainerChat({ open, onOpenChange, onForgeRequested }: TrainerCha
     }
   }, [messages])
 
-  // Check for forge requests in tool calls
+  // Check for forge requests in tool calls (AI SDK v6: parts are typed as `tool-<name>`).
   useEffect(() => {
     const lastMessage = messages[messages.length - 1]
-    if (lastMessage?.role === "assistant" && lastMessage.parts) {
-      for (const part of lastMessage.parts) {
-        if (part.type === "tool-invocation" && part.toolInvocation.toolName === "forge_mate") {
-          const result = part.toolInvocation.result as { action?: string; description?: string } | undefined
-          if (result?.action === "open_forge" && result.description) {
-            onForgeRequested?.(result.description)
-          }
+    if (lastMessage?.role !== "assistant" || !lastMessage.parts) return
+    for (const part of lastMessage.parts as Array<{ type: string; state?: string; output?: unknown }>) {
+      if (part.type === "tool-forge_mate" && part.state === "output-available") {
+        const out = part.output as { action?: string; description?: string } | undefined
+        if (out?.action === "open_forge" && out.description) {
+          onForgeRequested?.(out.description)
         }
       }
     }
@@ -104,7 +103,7 @@ export function TrainerChat({ open, onOpenChange, onForgeRequested }: TrainerCha
                       : "bg-secondary text-foreground"
                   )}
                 >
-                  {message.parts?.map((part, index) => {
+                  {(message.parts as Array<{ type: string; text?: string; state?: string; output?: unknown }> | undefined)?.map((part, index) => {
                     if (part.type === "text") {
                       return (
                         <p key={index} className="whitespace-pre-wrap text-sm">
@@ -112,19 +111,19 @@ export function TrainerChat({ open, onOpenChange, onForgeRequested }: TrainerCha
                         </p>
                       )
                     }
-                    if (part.type === "tool-invocation") {
-                      const { toolInvocation } = part
+                    if (part.type.startsWith("tool-")) {
+                      const toolName = part.type.slice("tool-".length)
                       return (
                         <div
                           key={index}
                           className="mt-2 rounded border border-border bg-card p-2 text-xs"
                         >
                           <span className="font-medium text-muted-foreground">
-                            Tool: {toolInvocation.toolName}
+                            Tool: {toolName}
                           </span>
-                          {toolInvocation.state === "output-available" && (
+                          {part.state === "output-available" && (
                             <pre className="mt-1 overflow-x-auto text-foreground/80">
-                              {JSON.stringify(toolInvocation.result, null, 2)}
+                              {JSON.stringify(part.output, null, 2)}
                             </pre>
                           )}
                         </div>
