@@ -10,7 +10,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { ArrowUp, ArrowDown, Trash2, Link2, Check, ExternalLink } from "lucide-react"
+import { ArrowUp, ArrowDown, Trash2, Link2, Check, ExternalLink, Send } from "lucide-react"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
+import { useRef, useEffect as useEffectScroll } from "react"
+import { Input } from "@/components/ui/input"
 
 interface MateDetailProps {
   mate: Mate | null
@@ -40,6 +44,13 @@ export function MateDetail({
   const [confidenceThreshold, setConfidenceThreshold] = useState(mate?.confidence_threshold ?? 0.7)
   const [authStatus, setAuthStatus] = useState<Record<string, { connected: boolean; authUrl?: string }>>({})
   const [authLoading, setAuthLoading] = useState(false)
+  const [chatInput, setChatInput] = useState("")
+  const chatScrollRef = useRef<HTMLDivElement>(null)
+  
+  const { messages, sendMessage, status } = useChat({
+    id: mate?.id,
+    transport: new DefaultChatTransport({ api: `/api/mate/${mate?.id}/act` }),
+  })
 
   useEffect(() => {
     if (mate?.id && open) {
@@ -94,8 +105,11 @@ export function MateDetail({
           </div>
         </SheetHeader>
 
-        <Tabs defaultValue="activity" className="mt-4 flex-1">
+        <Tabs defaultValue="chat" className="mt-4 flex-1">
           <TabsList className="w-full">
+            <TabsTrigger value="chat" className="flex-1">
+              Chat
+            </TabsTrigger>
             <TabsTrigger value="activity" className="flex-1">
               Activity
             </TabsTrigger>
@@ -114,6 +128,57 @@ export function MateDetail({
           </TabsList>
 
           <div className="mt-4 flex-1 overflow-auto">
+            <TabsContent value="chat" className="m-0 flex h-[400px] flex-col">
+              <div ref={chatScrollRef} className="flex-1 overflow-y-auto space-y-3 pr-2">
+                {messages.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Ask {mate.name} to do something...
+                  </p>
+                ) : (
+                  messages.map((msg) => {
+                    const text = msg.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text").map((p) => p.text).join("") || ""
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`rounded-lg px-3 py-2 text-sm ${
+                          msg.role === "user"
+                            ? "ml-8 bg-primary text-primary-foreground"
+                            : "mr-8 bg-secondary text-secondary-foreground"
+                        }`}
+                      >
+                        {text}
+                      </div>
+                    )
+                  })
+                )}
+                {status === "streaming" && (
+                  <div className="mr-8 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+                    Thinking...
+                  </div>
+                )}
+              </div>
+              <form
+                className="mt-3 flex gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (chatInput.trim()) {
+                    sendMessage({ text: chatInput })
+                    setChatInput("")
+                  }
+                }}
+              >
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder={`Message ${mate.name}...`}
+                  className="flex-1"
+                />
+                <Button type="submit" size="icon" disabled={status === "streaming"}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </form>
+            </TabsContent>
+
             <TabsContent value="activity" className="m-0">
               {loading ? (
                 <div className="py-8 text-center text-muted-foreground">Loading...</div>
