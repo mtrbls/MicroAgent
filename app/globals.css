@@ -4,31 +4,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Game Boy DMG palette — the four-shade green LCD look. */
-  --gb-lightest: #cadc9f;
-  --gb-light: #9bbc0f;
-  --gb-dark: #306230;
-  --gb-darkest: #0f380f;
-
-  --background: var(--gb-light);
-  --foreground: var(--gb-darkest);
-  --card: var(--gb-lightest);
-  --card-foreground: var(--gb-darkest);
-  --popover: var(--gb-lightest);
-  --popover-foreground: var(--gb-darkest);
-  --primary: var(--gb-darkest);
-  --primary-foreground: var(--gb-lightest);
-  --secondary: var(--gb-lightest);
-  --secondary-foreground: var(--gb-darkest);
-  --muted: var(--gb-lightest);
-  --muted-foreground: var(--gb-dark);
-  --accent: var(--gb-lightest);
-  --accent-foreground: var(--gb-darkest);
-  --destructive: #8b1a1a;
-  --destructive-foreground: var(--gb-lightest);
-  --border: var(--gb-darkest);
-  --input: var(--gb-darkest);
-  --ring: var(--gb-darkest);
+  --background: #fcfaf7;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-foreground: #fcfaf7;
+  --secondary: #f5f2ed;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f2ed;
+  --muted-foreground: #6b6b6b;
+  --accent: #f0ebe4;
+  --accent-foreground: #1a1a1a;
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+  --border: #e5e2db;
+  --input: #e5e2db;
+  --ring: #1a1a1a;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
