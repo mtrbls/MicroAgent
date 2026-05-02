@@ -31,17 +31,21 @@ export default function HomePage() {
   const [seeding, setSeeding] = useState(false)
   const autoSeededRef = useRef(false)
 
-  // Always show the default pack: on first mount, sync the starter pack so
-  // defaults are present in the list (and refreshed if their content changed).
+  // Always show the default pack: on first mount, sync the starter pack
+  // ONLY if the user has no mates yet. Returning users skip the network
+  // call entirely; the server still has a fast-path skip but avoiding
+  // the round-trip is the bigger win on slow links.
   useEffect(() => {
     if (autoSeededRef.current) return
+    if (!data) return // wait for /api/squad to resolve
     autoSeededRef.current = true
+    if (data.mates && data.mates.length > 0) return
     fetch("/api/mates/seed", { method: "POST" })
       .then(() => mutate("/api/squad"))
       .catch(() => {
         // Manual refresh button still available in the header on failure.
       })
-  }, [])
+  }, [data])
 
   const handleMateOpen = useCallback((mate: Mate) => {
     setSelectedMate(mate)

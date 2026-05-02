@@ -4,42 +4,37 @@ import { DEFAULT_MATES } from "@/lib/default-mates"
 import { registerMateOnMubit } from "@/lib/mubit"
 import { NextResponse } from "next/server"
 
-export async function POST() {
-  try {
-    const userId = await getUserId()
+let schemaBootstrapped = false
 
-    // Schema bootstrap. All idempotent — NO-OPs once the table exists
-    // with the right columns. Done here (rather than at sign-up) because
-    // mates ownership flows through this route.
-    await sql`
-      CREATE TABLE IF NOT EXISTS mates (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        archetype TEXT NOT NULL,
-        avatar_shape TEXT,
-        color TEXT,
-        tagline TEXT,
-        voice JSONB,
-        system_prompt_template TEXT,
-        tools JSONB,
-        confidence_threshold REAL DEFAULT 0.7,
-        level INTEGER NOT NULL DEFAULT 1,
-        episode_count INTEGER NOT NULL DEFAULT 0,
-        status TEXT NOT NULL DEFAULT 'idle',
-        last_active TIMESTAMPTZ,
-        on_active_squad BOOLEAN NOT NULL DEFAULT false,
-        is_recruited BOOLEAN NOT NULL DEFAULT true,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `
-    await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS schedule JSONB`
-    await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0`
-    await sql`CREATE INDEX IF NOT EXISTS mates_user_id_idx ON mates (user_id)`
-
-    // Feedback dedupe log: one verdict per (mate, reference, kind) — see
-    // the feedback route for the INSERT ... ON CONFLICT pattern.
-    await sql`
+async function ensureMatesSchema() {
+  if (schemaBootstrapped) return
+  await sql`
+    CREATE TABLE IF NOT EXISTS mates (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      archetype TEXT NOT NULL,
+      avatar_shape TEXT,
+      color TEXT,
+      tagline TEXT,
+      voice JSONB,
+      system_prompt_template TEXT,
+      tools JSONB,
+      confidence_threshold REAL DEFAULT 0.7,
+      level INTEGER NOT NULL DEFAULT 1,
+      episode_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'idle',
+      last_active TIMESTAMPTZ,
+      on_active_squad BOOLEAN NOT NULL DEFAULT false,
+      is_recruited BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await Promise.all([
+    sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS schedule JSONB`,
+    sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0`,
+    sql`CREATE INDEX IF NOT EXISTS mates_user_id_idx ON mates (user_id)`,
+    sql`
       CREATE TABLE IF NOT EXISTS feedback_log (
         mate_id TEXT NOT NULL,
         reference_id TEXT NOT NULL,
@@ -47,34 +42,47 @@ export async function POST() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         PRIMARY KEY (mate_id, reference_id, kind)
       )
-    `
+    `,
+  ])
+  schemaBootstrapped = true
+}
 
-    // Per-user scoped mate ids. Default-pack mate `mate_default_classify`
-    // becomes `${userId}_mate_default_classify` for this user, so two users
-    // can both seed the pack without colliding on mates.id (PK).
+export async function POST() {
+  try {
+    const userId = await getUserId()
+    await ensureMatesSchema()
+
     const scopedId = (m: { id: string }) => `${userId}_${m.id}`
     const newIds = new Set(DEFAULT_MATES.map(scopedId))
 
-    // Soft-archive any default mates from prior seed versions that are no
-    // longer in the pack.
-    const existing = await sql`
+    // Read existing mate ids once.
+    const existing = (await sql`
       SELECT id FROM mates WHERE user_id = ${userId}
-    `
+    `) as Array<{ id: string }>
+    const existingIds = new Set(existing.map((r) => r.id))
+
+    // Fast path: if every default mate id is already present and there
+    // are no obsolete defaults to archive, skip all the writes. This is
+    // the common case after the first sign-up — every subsequent home
+    // page mount lands here.
     const prefix = `${userId}_mate_default_`
-    let archived = 0
-    for (const row of existing) {
-      const id = row.id as string
-      if (id.startsWith(prefix) && !newIds.has(id)) {
-        await sql`UPDATE mates SET is_recruited = false WHERE id = ${id}`
-        archived++
-      }
+    const stale = existing.filter(
+      (r) => r.id.startsWith(prefix) && !newIds.has(r.id)
+    )
+    const allPresent = DEFAULT_MATES.every((m) => existingIds.has(scopedId(m)))
+    if (allPresent && stale.length === 0) {
+      return NextResponse.json({ success: true, synced: 0, archived: 0, skipped: true })
     }
 
-    // Upsert the current pack. Refinements to system prompts / taglines /
-    // voice land for users who seeded an earlier version.
-    for (const m of DEFAULT_MATES) {
+    // Soft-archive obsolete defaults in parallel.
+    const archivePromises = stale.map(
+      (r) => sql`UPDATE mates SET is_recruited = false WHERE id = ${r.id}`
+    )
+
+    // Upsert the current pack in parallel.
+    const upsertPromises = DEFAULT_MATES.map((m) => {
       const id = scopedId(m)
-      await sql`
+      return sql`
         INSERT INTO mates (
           id, user_id, name, archetype, avatar_shape, color, tagline,
           voice, system_prompt_template, tools, confidence_threshold,
@@ -109,26 +117,27 @@ export async function POST() {
           confidence_threshold = EXCLUDED.confidence_threshold,
           is_recruited = true
       `
-    }
+    })
 
-    // Register starter pack on MuBit, scoped per user-mate.
-    await Promise.all(
-      DEFAULT_MATES.map((m) =>
-        registerMateOnMubit({
-          id: scopedId(m),
-          name: m.name,
-          archetype: m.archetype,
-          tagline: m.tagline,
-          tools: m.tools,
-          system_prompt_template: m.system_prompt_template,
-        })
-      )
-    )
+    await Promise.all([...archivePromises, ...upsertPromises])
+
+    // Fire-and-forget MuBit registrations — these are external HTTP
+    // calls that don't need to block the user from seeing their list.
+    for (const m of DEFAULT_MATES) {
+      registerMateOnMubit({
+        id: scopedId(m),
+        name: m.name,
+        archetype: m.archetype,
+        tagline: m.tagline,
+        tools: m.tools,
+        system_prompt_template: m.system_prompt_template,
+      }).catch((err) => console.error("[mubit] background register failed:", err))
+    }
 
     return NextResponse.json({
       success: true,
       synced: DEFAULT_MATES.length,
-      archived,
+      archived: stale.length,
     })
   } catch (error) {
     console.error("[seed] error:", error)

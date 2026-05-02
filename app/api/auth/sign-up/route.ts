@@ -6,6 +6,23 @@ import { NextResponse } from "next/server"
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_PASSWORD = 8
 
+let usersBootstrapped = false
+
+async function ensureUsersTable() {
+  if (usersBootstrapped) return
+  // CREATE must finish before the dependent ALTERs / INDEX run, but
+  // the ALTERs and the index can fan out in parallel.
+  await sql`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)`
+  await Promise.all([
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT`,
+    sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`,
+    sql`CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email)`,
+  ])
+  usersBootstrapped = true
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.DATABASE_URL) {
@@ -15,14 +32,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Idempotent additive schema bootstrap.
-    await sql`CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY)`
-    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`
-    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT`
-    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt TEXT`
-    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`
-    await sql`CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email)`
-    await ensureSessionsTable()
+    // Bootstrap users + sessions schemas in parallel. Both are
+    // module-cached so warm Lambdas skip them entirely.
+    await Promise.all([ensureUsersTable(), ensureSessionsTable()])
 
     const body = (await request.json()) as { email?: string; password?: string }
     const email = (body.email ?? "").trim().toLowerCase()

@@ -50,8 +50,13 @@ export async function deleteSession(token: string | undefined | null): Promise<v
   }
 }
 
-/** Idempotent — safe to call from any route on first hit. */
+let sessionsBootstrapped = false
+
+/** Idempotent — safe to call from any route on first hit. After the
+ * first successful run within this Lambda's lifetime, subsequent calls
+ * are no-ops. */
 export async function ensureSessionsTable(): Promise<void> {
+  if (sessionsBootstrapped) return
   await sql`
     CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
@@ -60,8 +65,11 @@ export async function ensureSessionsTable(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `
-  await sql`CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id)`
-  await sql`CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions (expires_at)`
+  await Promise.all([
+    sql`CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id)`,
+    sql`CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions (expires_at)`,
+  ])
+  sessionsBootstrapped = true
 }
 
 export function sessionCookieOptions() {
