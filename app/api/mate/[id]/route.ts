@@ -2,6 +2,8 @@ import { sql } from "@/db"
 import { getUserId } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
+const ALLOWED_STATUSES = new Set(["idle", "working", "awaiting_user", "off_duty"])
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getUserId()
@@ -62,9 +64,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         case "confidence_threshold":
           await sql`UPDATE mates SET confidence_threshold = ${raw as number} WHERE id = ${id} AND user_id = ${userId}`
           break
-        case "status":
-          await sql`UPDATE mates SET status = ${raw as string} WHERE id = ${id} AND user_id = ${userId}`
+        case "status": {
+          const next = String(raw ?? "")
+          if (!ALLOWED_STATUSES.has(next)) break
+          await sql`UPDATE mates SET status = ${next} WHERE id = ${id} AND user_id = ${userId}`
           break
+        }
         case "schedule":
           await sql`UPDATE mates SET schedule = ${raw === null ? null : JSON.stringify(raw)} WHERE id = ${id} AND user_id = ${userId}`
           break

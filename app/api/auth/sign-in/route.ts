@@ -3,6 +3,12 @@ import { verifyPassword } from "@/lib/password"
 import { sessionCookieOptions, signSession } from "@/lib/cookie"
 import { NextResponse } from "next/server"
 
+// Pre-computed bogus hash + salt of the same shape as a real one
+// (PBKDF2-SHA256 256-bit hex / 16-byte salt hex). Used to keep the
+// no-such-email branch the same cost as a real verify.
+const DUMMY_HASH = "0".repeat(64)
+const DUMMY_SALT = "0".repeat(32)
+
 export async function POST(request: Request) {
   try {
     if (!process.env.DATABASE_URL) {
@@ -26,17 +32,17 @@ export async function POST(request: Request) {
       LIMIT 1
     `) as Array<{ id: string; password_hash: string | null; password_salt: string | null }>
 
-    if (rows.length === 0) {
+    // Always run a verifyPassword so the response time is constant whether
+    // or not the email exists — kills the trivial account-enumeration
+    // timing oracle.
+    const candidateHash = rows[0]?.password_hash ?? DUMMY_HASH
+    const candidateSalt = rows[0]?.password_salt ?? DUMMY_SALT
+    const ok = await verifyPassword(password, candidateHash, candidateSalt)
+
+    if (rows.length === 0 || !rows[0].password_hash || !rows[0].password_salt || !ok) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 })
     }
     const row = rows[0]
-    if (!row.password_hash || !row.password_salt) {
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 })
-    }
-    const ok = await verifyPassword(password, row.password_hash, row.password_salt)
-    if (!ok) {
-      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 })
-    }
 
     const cookieValue = await signSession(row.id)
     const res = NextResponse.json({ ok: true })
@@ -44,7 +50,6 @@ export async function POST(request: Request) {
     return res
   } catch (err) {
     console.error("[sign-in] failed:", err)
-    const detail = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: `Sign in failed: ${detail}` }, { status: 500 })
+    return NextResponse.json({ error: "Sign in failed. Please try again." }, { status: 500 })
   }
 }

@@ -16,12 +16,21 @@ const PUBLIC_PATHS = new Set([
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  if (PUBLIC_PATHS.has(pathname)) {
-    return NextResponse.next()
-  }
-
   const cookie = req.cookies.get(COOKIE_NAME)?.value
   const userId = await verifySession(cookie)
+
+  if (PUBLIC_PATHS.has(pathname)) {
+    // Already-signed-in users hitting /sign-in or /sign-up bounce home —
+    // less surprising UX than letting them reauth or sign up a second
+    // account from a logged-in session.
+    if (userId && (pathname === "/sign-in" || pathname === "/sign-up")) {
+      const url = req.nextUrl.clone()
+      url.pathname = "/"
+      url.search = ""
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
 
   if (userId) {
     const fwd = new Headers(req.headers)

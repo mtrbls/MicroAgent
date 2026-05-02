@@ -12,9 +12,13 @@ interface SessionPayload {
 function getSecret(): Uint8Array {
   const raw = process.env.AUTH_COOKIE_SECRET
   if (!raw || raw.length < 16) {
-    // Fallback only — in production, set AUTH_COOKIE_SECRET to a random
-    // 32+ char string. Cookies signed under the fallback aren't portable
-    // across deployments.
+    if (process.env.NODE_ENV === "production") {
+      // Refuse to issue/verify cookies under a known constant in prod —
+      // anyone reading the repo could forge sessions for any userId.
+      throw new Error(
+        "AUTH_COOKIE_SECRET is not set (need 16+ chars). Refusing to fall back to the dev secret in production."
+      )
+    }
     return new TextEncoder().encode("dev-only-not-for-prod-secret-x9k2")
   }
   return new TextEncoder().encode(raw)

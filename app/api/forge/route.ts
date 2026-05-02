@@ -152,7 +152,8 @@ Create:
       INSERT INTO mates (
         id, user_id, name, archetype, avatar_shape, color, tagline,
         voice, system_prompt_template, tools, confidence_threshold,
-        level, episode_count, status, on_active_squad, is_recruited
+        level, episode_count, status, on_active_squad, is_recruited,
+        created_at
       ) VALUES (
         ${id},
         ${userId},
@@ -169,7 +170,8 @@ Create:
         0,
         'idle',
         false,
-        true
+        true,
+        NOW()
       )
     `
 

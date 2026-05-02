@@ -57,9 +57,8 @@ export async function POST(request: Request) {
     return res
   } catch (err) {
     console.error("[sign-up] failed:", err)
-    const detail = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: `Sign up failed: ${detail}` },
+      { error: "Sign up failed. Please try again." },
       { status: 500 }
     )
   }

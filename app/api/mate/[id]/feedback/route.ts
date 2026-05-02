@@ -33,6 +33,19 @@ export async function POST(
         return NextResponse.json({ error: "Missing outcome" }, { status: 400 })
       }
 
+      // Dedupe by (mate, reference, kind) — one verdict per assistant
+      // message id. INSERT...ON CONFLICT lets us short-circuit when the
+      // user has already voted on this reference.
+      const dedupe = (await sql`
+        INSERT INTO feedback_log (mate_id, reference_id, kind)
+        VALUES (${id}, ${referenceId}, 'verdict')
+        ON CONFLICT (mate_id, reference_id, kind) DO NOTHING
+        RETURNING mate_id
+      `) as Array<{ mate_id: string }>
+      if (dedupe.length === 0) {
+        return NextResponse.json({ ok: true, recorded: false, reason: "duplicate" })
+      }
+
       // Both 👍 and 👎 are signals — both bump XP. Level: lvl 1 ends at
       // FIRST_LEVEL_XP, then each subsequent level requires
       // XP_PER_LEVEL_AFTER xp.
