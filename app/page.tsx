@@ -7,6 +7,7 @@ import { MateRow } from "@/components/mate-row"
 import { TrainerChat } from "@/components/trainer-chat"
 import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
+import { LaunchModal } from "@/components/launch-modal"
 import { Button } from "@/components/ui/button"
 import { MessageSquare, Sparkles } from "lucide-react"
 
@@ -23,7 +24,7 @@ export default function HomePage() {
 
   const [selectedMate, setSelectedMate] = useState<Mate | null>(null)
   const [mateDetailOpen, setMateDetailOpen] = useState(false)
-  const [launchKey, setLaunchKey] = useState(0)
+  const [launchMate, setLaunchMate] = useState<Mate | null>(null)
   const [trainerOpen, setTrainerOpen] = useState(false)
   const [forgeOpen, setForgeOpen] = useState(false)
   const [forgeDescription, setForgeDescription] = useState("")
@@ -35,9 +36,7 @@ export default function HomePage() {
   }, [])
 
   const handleMateLaunch = useCallback((mate: Mate) => {
-    setSelectedMate(mate)
-    setMateDetailOpen(true)
-    setLaunchKey((k) => k + 1)
+    setLaunchMate(mate)
   }, [])
 
   const handleArchive = useCallback(async (mateId: string) => {
@@ -142,8 +141,17 @@ export default function HomePage() {
         open={mateDetailOpen}
         onOpenChange={setMateDetailOpen}
         onArchive={handleArchive}
-        launchKey={launchKey}
       />
+
+      {launchMate && (
+        <LaunchModal
+          mate={launchMate}
+          open={true}
+          onOpenChange={(o) => {
+            if (!o) setLaunchMate(null)
+          }}
+        />
+      )}
 
       <ForgeFlow
         open={forgeOpen}

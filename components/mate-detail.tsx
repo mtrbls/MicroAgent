@@ -21,8 +21,6 @@ interface MateDetailProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onArchive?: (mateId: string) => void
-  /** When this number changes, auto-send a launch message to the mate. */
-  launchKey?: number
 }
 
 interface MateDetailData {
@@ -31,7 +29,7 @@ interface MateDetailData {
   memoryFacts: MemoryFact[]
 }
 
-export function MateDetail({ mate, open, onOpenChange, onArchive, launchKey }: MateDetailProps) {
+export function MateDetail({ mate, open, onOpenChange, onArchive }: MateDetailProps) {
   const [data, setData] = useState<MateDetailData | null>(null)
   const [loading, setLoading] = useState(false)
   const [confidenceThreshold, setConfidenceThreshold] = useState(mate?.confidence_threshold ?? 0.7)
@@ -39,7 +37,6 @@ export function MateDetail({ mate, open, onOpenChange, onArchive, launchKey }: M
   const [authLoading, setAuthLoading] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const chatScrollRef = useRef<HTMLDivElement>(null)
-  const lastLaunchKey = useRef<number | undefined>(undefined)
 
   const { messages, sendMessage, status } = useChat({
     id: mate?.id,
@@ -72,14 +69,6 @@ export function MateDetail({ mate, open, onOpenChange, onArchive, launchKey }: M
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
     }
   }, [messages])
-
-  // Auto-fire the mate's one action when a launch is requested.
-  useEffect(() => {
-    if (!open || !mate?.id || launchKey === undefined) return
-    if (lastLaunchKey.current === launchKey) return
-    lastLaunchKey.current = launchKey
-    sendMessage({ text: "Run your action now." })
-  }, [launchKey, open, mate?.id, sendMessage])
 
   if (!mate) return null
 
