@@ -16,12 +16,15 @@ export async function POST(request: Request) {
   const { description } = await request.json()
 
   try {
-    // Step 1: Name + archetype
+    // Step 1: Name + archetype. A mate does ONE specific action — name should
+    // hint at the action, archetype anchors the domain.
     const step1 = await generateText({
       model: forgeFinalModel,
-      prompt: `Based on this description of an AI assistant: "${description}"
+      prompt: `A "mate" is a single-purpose AI assistant that performs ONE specific repeatable action (e.g. "delete promotional emails older than 7 days", "block 30 min of focus time every weekday morning", "label invoices and forward to my accountant").
 
-Generate a short, memorable name (1-2 syllables, easy to say) and determine the best archetype.
+User's description of the action they want a mate for: "${description}"
+
+Generate a short, memorable name (1-2 syllables, easy to say) and the best archetype for the action.
 
 Archetypes: correspondence (emails/messages), scheduler (calendar/meetings), research (finding info), money (finances/invoices), health (fitness/wellness), memory (notes/recall), code (programming), deals (finding bargains), custom (other).`,
       output: Output.object({
@@ -73,45 +76,55 @@ Define their voice:
 
     const voice = step3.output
 
-    // Step 4: Tools
+    // Step 4: Tool. Each mate gets exactly ONE primary toolkit — pick the
+    // single best fit for the action.
     const step4 = await generateText({
       model: forgeFinalModel,
-      prompt: `For an AI assistant named "${name}" (${archetype}): ${description}
+      prompt: `Mate "${name}" (${archetype}) has ONE specific action to perform: ${description}
 
-What MCP tools would this assistant need? Available servers:
-- gmail (draft, send, search, label)
+Pick the SINGLE most appropriate MCP toolkit for that action. Available toolkits:
+- gmail (draft, send, search, label, delete)
 - calendar (read, create, update)
 - web-search (search, fetch)
 - github (read, create_issue, create_pr)
 - slack (send, search)
 - notion (read, create, update)
 
-List only the ones that make sense for this assistant.`,
+Choose exactly one.`,
       output: Output.object({
         schema: z.object({
-          tools: z.array(
-            z.object({
-              mcp_server: z.enum(MCP_SERVERS),
-              scope: z.array(z.string()),
-            })
-          ),
+          mcp_server: z.enum(MCP_SERVERS),
+          scope: z.array(z.string()).describe("Specific operations needed"),
         }),
       }),
     })
 
-    const tools = step4.output.tools
-      .filter((t) => t.mcp_server in TOOLKIT_MAP)
-      .map((t) => ({ ...t, mcp_url: `composio://${TOOLKIT_MAP[t.mcp_server]}` }))
+    const tools =
+      step4.output.mcp_server in TOOLKIT_MAP
+        ? [
+            {
+              mcp_server: step4.output.mcp_server,
+              scope: step4.output.scope,
+              mcp_url: `composio://${TOOLKIT_MAP[step4.output.mcp_server]}`,
+            },
+          ]
+        : []
 
-    // Step 5: System prompt + tagline + confidence
+    // Step 5: System prompt + tagline + confidence. The system prompt must
+    // bake in the single-action constraint — the mate does this one thing,
+    // nothing else.
     const step5 = await generateText({
       model: forgeFinalModel,
-      prompt: `For an AI assistant named "${name}" (${archetype}): ${description}
+      prompt: `Mate "${name}" (${archetype}) does exactly ONE action: ${description}
+Their toolkit: ${tools[0]?.mcp_server ?? "none"}
 
 Create:
-1. A short tagline (under 50 chars) describing what they do
-2. An initial confidence threshold (0.6-0.9, lower = more cautious)
-3. A system prompt template that defines their behavior`,
+1. A short tagline (under 50 chars) that names the single action — written like an imperative ("Delete promo emails", "Block focus time", "Triage GitHub issues").
+2. An initial confidence threshold (0.6-0.9, lower = more cautious).
+3. A system_prompt_template that locks the mate to this one action. It must:
+   - Open with: "Your one job is to ${"<single action>"}."
+   - Forbid the mate from doing tasks outside that action — if asked, politely decline and remind the user what they do.
+   - Be concise (under 600 chars).`,
       output: Output.object({
         schema: z.object({
           tagline: z.string(),
