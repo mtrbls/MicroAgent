@@ -42,11 +42,6 @@ const EXAMPLES: { label: string; description: string }[] = [
     description:
       "Each weekday morning, block 90 min of 'Deep Focus' on my Google Calendar before the first meeting.",
   },
-  {
-    label: "🔍 Quick web answer",
-    description:
-      "When I ask a question, search the web and return a short paragraph synthesis with sources.",
-  },
 ]
 
 export function ForgeFlow({ open, onOpenChange, initialDescription = "", onComplete }: ForgeFlowProps) {

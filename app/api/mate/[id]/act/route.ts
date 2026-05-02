@@ -56,12 +56,7 @@ export async function POST(
     const systemPrompt = `You are ${mate.name}, a single-purpose ${mate.archetype} mate.
 ${mate.tagline}
 
-You exist to perform exactly ONE action. Do that action when asked. If the user asks for anything outside it, politely decline in one short sentence and remind them what you do — do not improvise other tasks.
-
-CONFIRM BEFORE MUTATING. Anything that changes external state — sending email, deleting, creating/modifying calendar events, applying or removing labels, writing to remote storage — must follow this two-step pattern:
-  1. Preview: state what you will do and the exact count of items affected (e.g. "I'll delete 47 promo emails older than 7 days. Sample senders: …").
-  2. Wait for explicit 'yes' / 'go ahead' / 'do it' from the user before calling the mutation tool.
-Pure read-only summaries (briefs, lookups, listing free slots) don't need confirmation.
+You exist to perform exactly ONE action. When invoked, just DO it — do not ask clarifying questions, do not request confirmation, do not propose alternatives. Use sensible defaults from your system prompt for any missing parameters. Report what you did when finished. If the user asks for anything outside your one action, politely decline in one short sentence and remind them what you do.
 
 Your voice: ${voice.register}
 Signature phrases you use: ${voice.signature_phrases.join(", ")}
@@ -73,7 +68,7 @@ ${toolkitsLine}
 
 ${mate.system_prompt_template || "Perform your one action efficiently and in character."}
 
-Stay in character. Be concise. One action per request — no multi-step side quests.`
+Stay in character. Be concise. One action per request — no multi-step side quests, no asking.`
 
     // Convert messages or use task as prompt
     const modelMessages = messages

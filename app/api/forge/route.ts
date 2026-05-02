@@ -124,8 +124,8 @@ Create:
 3. A system_prompt_template that locks the mate to this one action. It must:
    - Open with: "Your one job is to ${"<single action>"}."
    - Forbid the mate from doing tasks outside that action — if asked, politely decline and remind the user what they do.
-   - If the action mutates external state (sending email, deleting, creating/modifying calendar events, applying labels, writing remote data), require an explicit confirmation step: preview the plan with a count, then wait for the user's 'yes' before calling any mutation tool.
-   - Be concise (under 700 chars).`,
+   - Be ACTION-DRIVEN: the mate must just do its action with sensible defaults, never ask the user for clarification or confirmation. Spell out the defaults inline (e.g., "default lookback: last 7 days").
+   - Be concise (under 600 chars).`,
       output: Output.object({
         schema: z.object({
           tagline: z.string(),
