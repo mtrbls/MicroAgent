@@ -19,12 +19,16 @@ export async function middleware(req: NextRequest) {
     return new NextResponse("Server misconfigured: DATABASE_URL missing", { status: 500 })
   }
 
+  let reason: string = "no_basic_header"
+
   const header = req.headers.get("authorization")
   if (header?.startsWith("Basic ")) {
     const encoded = header.slice("Basic ".length)
     const decoded = decodeBase64(encoded)
     const idx = decoded.indexOf(":")
-    if (idx >= 0) {
+    if (idx < 0) {
+      reason = "malformed_basic"
+    } else {
       const email = decoded.slice(0, idx).trim().toLowerCase()
       const password = decoded.slice(idx + 1)
       try {
@@ -34,27 +38,38 @@ export async function middleware(req: NextRequest) {
           FROM users
           WHERE email = ${email}
           LIMIT 1
-        `) as Array<{ id: string; password_hash: string; password_salt: string }>
-        if (rows.length === 1) {
-          const ok = await verifyPassword(password, rows[0].password_hash, rows[0].password_salt)
+        `) as Array<{ id: string; password_hash: string | null; password_salt: string | null }>
+        if (rows.length === 0) {
+          reason = `user_not_found:${email}`
+        } else if (!rows[0].password_hash || !rows[0].password_salt) {
+          reason = "user_has_no_password"
+        } else {
+          const ok = await verifyPassword(
+            password,
+            rows[0].password_hash,
+            rows[0].password_salt
+          )
           if (ok) {
             const fwd = new Headers(req.headers)
             fwd.set("x-user-id", rows[0].id)
             return NextResponse.next({ request: { headers: fwd } })
           }
+          reason = "password_mismatch"
         }
       } catch (err) {
-        // Likely the users table doesn't exist yet — fall through to 401.
+        reason = `lookup_error:${err instanceof Error ? err.message : "unknown"}`
         console.error("[auth] middleware lookup failed:", err)
       }
     }
   }
 
-  return new NextResponse(SIGN_IN_HTML, {
+  console.error("[auth] 401:", reason)
+  return new NextResponse(SIGN_IN_HTML.replace("__REASON__", reason), {
     status: 401,
     headers: {
       "WWW-Authenticate": 'Basic realm="μAgent", charset="UTF-8"',
       "Content-Type": "text/html; charset=utf-8",
+      "X-Auth-Reason": reason,
     },
   })
 }
@@ -84,5 +99,6 @@ const SIGN_IN_HTML = `<!DOCTYPE html>
   <h1>μAgent</h1>
   <p>Sign in with your email + password — your browser should pop a dialog. If you cancelled it, refresh the page to try again.</p>
   <p>New here? <a class="btn" href="/sign-up">Create an account →</a></p>
+  <p style="margin-top:32px;font-size:11px;color:#888;font-family:ui-monospace,monospace">debug: __REASON__</p>
 </body>
 </html>`

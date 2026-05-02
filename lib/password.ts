@@ -1,6 +1,9 @@
 // PBKDF2 password hashing using Web Crypto so it runs in both Node and
 // Edge runtimes (Next.js middleware, route handlers).
 
+// Don't change ITERATIONS after users have signed up — the stored
+// hash is parameterized by it implicitly, so anyone hashed with N
+// iterations needs verification with the same N or they'll fail.
 const ITERATIONS = 100_000
 const SALT_BYTES = 16
 const KEY_BITS = 256
