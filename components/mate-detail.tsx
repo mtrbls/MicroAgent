@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { ArrowUp, ArrowDown, Trash2 } from "lucide-react"
+import { ArrowUp, ArrowDown, Trash2, Link2, Check, ExternalLink } from "lucide-react"
 
 interface MateDetailProps {
   mate: Mate | null
@@ -38,6 +38,8 @@ export function MateDetail({
   const [data, setData] = useState<MateDetailData | null>(null)
   const [loading, setLoading] = useState(false)
   const [confidenceThreshold, setConfidenceThreshold] = useState(mate?.confidence_threshold ?? 0.7)
+  const [authStatus, setAuthStatus] = useState<Record<string, { connected: boolean; authUrl?: string }>>({})
+  const [authLoading, setAuthLoading] = useState(false)
 
   useEffect(() => {
     if (mate?.id && open) {
@@ -50,6 +52,14 @@ export function MateDetail({
         })
         .catch(console.error)
         .finally(() => setLoading(false))
+
+      // Fetch auth status for connected apps
+      setAuthLoading(true)
+      fetch(`/api/mate/${mate.id}/auth`)
+        .then((res) => res.json())
+        .then((d) => setAuthStatus(d.connections || {}))
+        .catch(console.error)
+        .finally(() => setAuthLoading(false))
     }
   }, [mate?.id, open])
 
@@ -91,6 +101,9 @@ export function MateDetail({
             </TabsTrigger>
             <TabsTrigger value="voice" className="flex-1">
               Voice
+            </TabsTrigger>
+            <TabsTrigger value="connections" className="flex-1">
+              Apps
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex-1">
               Settings
@@ -152,6 +165,57 @@ export function MateDetail({
                     )}
                   </div>
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="connections" className="m-0">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Connect apps to give {mate.name} real capabilities.
+                </p>
+                {authLoading ? (
+                  <div className="py-8 text-center text-muted-foreground">Loading...</div>
+                ) : Object.keys(authStatus).length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    No apps configured for this mate.
+                  </div>
+                ) : (
+                  Object.entries(authStatus).map(([app, status]) => (
+                    <div
+                      key={app}
+                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary">
+                          <Link2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium capitalize">{app.replace("_", " ")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {status.connected ? "Connected" : "Not connected"}
+                          </p>
+                        </div>
+                      </div>
+                      {status.connected ? (
+                        <div className="flex items-center gap-1 text-sm text-green-600">
+                          <Check className="h-4 w-4" />
+                          Active
+                        </div>
+                      ) : status.authUrl ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(status.authUrl, "_blank")}
+                        >
+                          Connect
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Setup required</span>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </TabsContent>
 
