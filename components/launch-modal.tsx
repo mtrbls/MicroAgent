@@ -58,7 +58,7 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex flex-col gap-0 overflow-hidden p-0 top-4 translate-y-0 max-h-[calc(100dvh-2rem)] sm:top-1/2 sm:-translate-y-1/2 sm:max-h-[85dvh] sm:max-w-lg"
+        className="flex flex-col gap-0 overflow-hidden p-0 top-0 left-0 translate-x-0 translate-y-0 h-dvh w-screen max-w-none rounded-none border-0 sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:h-[85dvh] sm:w-[680px] sm:max-w-[92vw] sm:rounded-lg sm:border"
       >
         <div
           aria-hidden
@@ -66,7 +66,7 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
           style={{ background: mate.color }}
         />
 
-        <DialogHeader className="relative px-6 pt-6">
+        <DialogHeader className="relative shrink-0 border-b border-border/30 px-6 pb-4 pt-6">
           <div className="flex items-start gap-4 text-left">
             <MateAvatar name={mate.name} color={mate.color} size="lg" />
             <div className="min-w-0 flex-1">
@@ -83,7 +83,7 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
         <div
           ref={scrollRef}
-          className="relative mx-6 mt-4 flex-1 space-y-3 overflow-y-auto rounded-xl border border-border/50 bg-secondary/40 p-4"
+          className="relative min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4"
         >
           {isStarting && messages.length === 0 ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -143,7 +143,7 @@ export function LaunchModal({ mate, open, onOpenChange }: LaunchModalProps) {
 
         <form
           onSubmit={handleSubmit}
-          className="relative mt-4 flex items-center gap-2 border-t border-border/30 bg-background/60 px-6 py-4"
+          className="relative flex shrink-0 items-center gap-2 border-t border-border/30 bg-background/80 px-6 py-4"
         >
           <Input
             value={input}
