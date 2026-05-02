@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import useSWR, { mutate } from "swr"
 import type { Mate } from "@/lib/types"
 import { MateRow } from "@/components/mate-row"
+import { MateCard } from "@/components/mate-card"
 import { TrainerChat } from "@/components/trainer-chat"
 import { MateDetail } from "@/components/mate-detail"
 import { ForgeFlow } from "@/components/forge-flow"
@@ -81,7 +82,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4 md:max-w-6xl md:px-6">
           <span className="text-xl font-bold text-foreground">Mates</span>
           <div className="flex items-center gap-2">
             <Button
@@ -105,7 +106,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-2xl px-4 py-6">
+      <div className="mx-auto max-w-2xl px-4 py-6 md:max-w-6xl md:px-6">
         {mates.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-12 text-center">
             <p className="text-muted-foreground">No mates yet</p>
@@ -123,19 +124,34 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
-            {mates.map((mate) => (
-              <MateRow
-                key={mate.id}
-                mate={mate}
-                onOpen={() => handleMateOpen(mate)}
-                onLaunch={() => handleMateLaunch(mate)}
-              />
-            ))}
-            <p className="pt-2 text-center text-xs text-muted-foreground/60">
-              Tap to open · swipe right to launch
-            </p>
-          </div>
+          <>
+            {/* Mobile: swipable list */}
+            <div className="space-y-2 md:hidden">
+              {mates.map((mate) => (
+                <MateRow
+                  key={mate.id}
+                  mate={mate}
+                  onOpen={() => handleMateOpen(mate)}
+                  onLaunch={() => handleMateLaunch(mate)}
+                />
+              ))}
+              <p className="pt-2 text-center text-xs text-muted-foreground/60">
+                Tap to open · swipe right to launch
+              </p>
+            </div>
+
+            {/* Desktop: grid of cards with explicit Launch buttons */}
+            <div className="hidden gap-4 md:grid md:grid-cols-2 lg:grid-cols-3">
+              {mates.map((mate) => (
+                <MateCard
+                  key={mate.id}
+                  mate={mate}
+                  onOpen={() => handleMateOpen(mate)}
+                  onLaunch={() => handleMateLaunch(mate)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
