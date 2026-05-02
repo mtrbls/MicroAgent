@@ -12,9 +12,9 @@ function getMubitClient(): Client | null {
 }
 
 /**
- * Register a freshly-forged mate as a MuBit agent so its memory + reflection
- * loop is properly scoped. Non-fatal: any error is logged but doesn't break
- * the forge flow. No-op when MUBIT_API_KEY isn't set.
+ * Register a freshly-created mate as a MuBit agent so its memory +
+ * reflection loop is properly scoped. Non-fatal: any error is logged but
+ * doesn't break the create flow. No-op when MUBIT_API_KEY isn't set.
  */
 export async function registerMateOnMubit(
   mate: Pick<

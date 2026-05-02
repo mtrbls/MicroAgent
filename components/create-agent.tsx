@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Loader2, Plus, Check } from "lucide-react"
 import type { Mate } from "@/lib/types"
 
-interface ForgeFlowProps {
+interface CreateAgentProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onComplete?: (mate: Mate) => void
@@ -26,7 +26,7 @@ const STEPS: { key: StepKey; label: string }[] = [
   { key: "save", label: "Saving" },
 ]
 
-interface ForgeEvent {
+interface CreateAgentEvent {
   step: StepKey | "done" | "error"
   status: "start" | "done" | "error"
   label?: string
@@ -35,7 +35,7 @@ interface ForgeEvent {
   mate?: Mate
 }
 
-export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
+export function CreateAgent({ open, onOpenChange, onComplete }: CreateAgentProps) {
   const router = useRouter()
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
@@ -66,12 +66,12 @@ export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
     setLoading(true)
     reset()
     try {
-      const res = await fetch("/api/forge", {
+      const res = await fetch("/api/agents/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description }),
       })
-      if (!res.ok || !res.body) throw new Error("Failed to start forge")
+      if (!res.ok || !res.body) throw new Error("Could not start the create flow")
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -90,14 +90,14 @@ export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
           if (!line.startsWith("data:")) continue
           const json = line.slice("data:".length).trim()
           if (!json) continue
-          let event: ForgeEvent
+          let event: CreateAgentEvent
           try {
             event = JSON.parse(json)
           } catch {
             continue
           }
           if (event.step === "error") {
-            throw new Error(event.message ?? "Forge failed")
+            throw new Error(event.message ?? "Could not create agent")
           }
           if (event.step === "done") {
             createdMate = event.mate ?? null
@@ -120,7 +120,7 @@ export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
         onOpenChange(false)
         router.refresh()
       } else {
-        throw new Error("Forge stream ended without a mate")
+        throw new Error("Stream ended without an agent")
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong")
@@ -137,11 +137,11 @@ export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
         <DialogHeader className="shrink-0 border-b border-border/30 px-6 pb-4 pt-6">
           <DialogTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
             <Plus className="h-5 w-5 text-foreground/80" />
-            New action
+            Create agent
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Describe one specific action your agent should do. We'll forge an
-            agent that uses the right MCP tools.
+            Describe one specific action your agent should do. We'll wire it
+            up with the right MCP toolkits.
           </p>
         </DialogHeader>
 
@@ -213,12 +213,12 @@ export function ForgeFlow({ open, onOpenChange, onComplete }: ForgeFlowProps) {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Forging...
+                Creating...
               </>
             ) : (
               <>
                 <Plus className="mr-2 h-4 w-4" />
-                Forge
+                Create
               </>
             )}
           </Button>

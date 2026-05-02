@@ -1,6 +1,6 @@
 import { sql } from "@/db"
 import { getUserId } from "@/lib/auth"
-import { forgeFinalModel } from "@/lib/ai"
+import { createAgentModel } from "@/lib/ai"
 import { TOOLKIT_MAP } from "@/lib/mcp"
 import { registerMateOnMubit } from "@/lib/mubit"
 import { generateText, Output } from "ai"
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         // Step 1: name + archetype
         send({ step: "name", status: "start", label: "Naming the agent..." })
         const step1 = await generateText({
-          model: forgeFinalModel,
+          model: createAgentModel,
           prompt: `A "mate" is a single-purpose AI assistant that performs ONE specific repeatable action.
 
 User's description: "${description}"
@@ -71,7 +71,7 @@ Archetypes: correspondence (emails/messages), scheduler (calendar/meetings), res
         // Step 2: avatar + color
         send({ step: "avatar", status: "start", label: "Picking avatar..." })
         const step2 = await generateText({
-          model: forgeFinalModel,
+          model: createAgentModel,
           prompt: `For "${name}" (${archetype}, ${description}): choose an avatar shape and a muted hex color.
 
 Shapes: circle (friendly), hexagon (organized), triangle (alert), square (solid), diamond (clever), oval (gentle).`,
@@ -88,7 +88,7 @@ Shapes: circle (friendly), hexagon (organized), triangle (alert), square (solid)
         // Step 3: voice
         send({ step: "voice", status: "start", label: "Defining voice..." })
         const step3 = await generateText({
-          model: forgeFinalModel,
+          model: createAgentModel,
           prompt: `For "${name}" (${archetype}): ${description}
 
 Define their voice:
@@ -109,7 +109,7 @@ Define their voice:
         // Step 4: toolkits — primary + up to 2 secondaries
         send({ step: "tools", status: "start", label: "Choosing tools..." })
         const step4 = await generateText({
-          model: forgeFinalModel,
+          model: createAgentModel,
           prompt: `Mate "${name}" (${archetype}) does this action: ${description}
 
 Pick the MCP toolkits this agent needs from the list below. Output a primary toolkit (the most central one) and 0-2 secondaries (only if the action genuinely crosses tools — e.g. "draft a Slack post from yesterday's GitHub commits" needs github + slack).
@@ -144,7 +144,7 @@ Be conservative — most agents only need the primary.`,
         // Step 5: system prompt + tagline + confidence
         send({ step: "prompt", status: "start", label: "Writing system prompt..." })
         const step5 = await generateText({
-          model: forgeFinalModel,
+          model: createAgentModel,
           prompt: `Mate "${name}" (${archetype}) does exactly ONE action: ${description}
 Toolkits available to it: ${tools.map((t) => t.mcp_server).join(", ") || "none"}
 
@@ -200,7 +200,7 @@ Create:
         `
         // Fire-and-forget MuBit registration
         registerMateOnMubit({ id, name, archetype, tagline, tools, system_prompt_template }).catch(
-          (err) => console.error("[forge] mubit register failed:", err)
+          (err) => console.error("[create-agent] mubit register failed:", err)
         )
 
         send({
@@ -221,8 +221,8 @@ Create:
         })
         controller.close()
       } catch (err) {
-        console.error("[forge] failed:", err)
-        send({ step: "error", status: "error", message: "Forge failed. Try again." })
+        console.error("[create-agent] failed:", err)
+        send({ step: "error", status: "error", message: "Could not create agent. Try again. Try again." })
         controller.close()
       }
     },

@@ -3,7 +3,7 @@ import { VercelProvider } from "@composio/vercel"
 import type { Mate, ToolBinding } from "./types"
 
 // Map our internal mcp_server names to Composio toolkit slugs (lowercase).
-// The forge LLM picks from these keys; the value is what Composio expects.
+// The create-agent LLM picks from these keys; the value is what Composio expects.
 // Add more as you find users asking for them — Composio supports 250+.
 export const TOOLKIT_MAP: Record<string, string> = {
   // Email + calendar

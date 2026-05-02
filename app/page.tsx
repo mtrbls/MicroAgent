@@ -6,7 +6,7 @@ import type { Mate } from "@/lib/types"
 import { MateRow } from "@/components/mate-row"
 import { MateCard } from "@/components/mate-card"
 import { MateDetail } from "@/components/mate-detail"
-import { ForgeFlow } from "@/components/forge-flow"
+import { CreateAgent } from "@/components/create-agent"
 import { LaunchModal } from "@/components/launch-modal"
 import { McpSetupModal } from "@/components/mcp-setup-modal"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,7 @@ export default function HomePage() {
   const [selectedMate, setSelectedMate] = useState<Mate | null>(null)
   const [mateDetailOpen, setMateDetailOpen] = useState(false)
   const [launchMate, setLaunchMate] = useState<Mate | null>(null)
-  const [forgeOpen, setForgeOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [mcpSetupMate, setMcpSetupMate] = useState<Mate | null>(null)
   const [seeding, setSeeding] = useState(false)
   const autoSeededRef = useRef(false)
@@ -62,11 +62,11 @@ export default function HomePage() {
     setMateDetailOpen(false)
   }, [])
 
-  const handleForgeComplete = useCallback((mate: Mate) => {
+  const handleCreateComplete = useCallback((mate: Mate) => {
     mutate("/api/squad")
-    // Defer opening the second modal until ForgeFlow's close animation
-    // (~200ms) finishes, otherwise the two dialogs stack briefly and the
-    // closing dialog's footer leaks behind the new one.
+    // Defer opening the MCP setup modal until the create dialog's close
+    // animation (~200ms) finishes, otherwise the two dialogs stack briefly
+    // and the closing dialog's footer leaks behind the new one.
     setTimeout(() => setMcpSetupMate(mate), 260)
   }, [])
 
@@ -132,11 +132,11 @@ export default function HomePage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => setForgeOpen(true)}
+              onClick={() => setCreateOpen(true)}
               className="rounded-none border-2 border-foreground"
             >
               <Plus className="mr-1.5 h-4 w-4" />
-              New
+              Create
             </Button>
           </div>
         </div>
@@ -197,10 +197,10 @@ export default function HomePage() {
         />
       )}
 
-      <ForgeFlow
-        open={forgeOpen}
-        onOpenChange={setForgeOpen}
-        onComplete={handleForgeComplete}
+      <CreateAgent
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onComplete={handleCreateComplete}
       />
 
       <McpSetupModal
