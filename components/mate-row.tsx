@@ -5,7 +5,7 @@ import { useSwipeable } from "react-swipeable"
 import type { Mate } from "@/lib/types"
 import { MateAvatar } from "./avatar"
 import { LevelBadge } from "./level-badge"
-import { levelProgress } from "./experience-bar"
+import { ExperienceBar, levelProgress } from "./experience-bar"
 import { Play, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -96,6 +96,7 @@ export function MateRow({ mate, onOpen, onLaunch }: MateRowProps) {
               <LevelBadge level={levelProgress(mate.experience ?? 0).level} />
             </div>
             <p className="truncate text-sm text-foreground/70">{mate.tagline}</p>
+            <ExperienceBar experience={mate.experience ?? 0} compact className="mt-1.5" />
           </div>
           <ChevronRight className="h-4 w-4 flex-shrink-0 text-foreground/50" />
         </button>

@@ -19,11 +19,30 @@ export function levelProgress(experience: number) {
 interface ExperienceBarProps {
   experience: number
   className?: string
+  /** When true, renders just the bar without the lv / xp labels. */
+  compact?: boolean
 }
 
-export function ExperienceBar({ experience, className }: ExperienceBarProps) {
+export function ExperienceBar({
+  experience,
+  className,
+  compact,
+}: ExperienceBarProps) {
   const { level, xpInLevel, xpForLevel } = levelProgress(experience)
   const progress = xpForLevel === 0 ? 0 : Math.min(1, xpInLevel / xpForLevel)
+
+  const bar = (
+    <div className="h-1 w-full overflow-hidden rounded-full border border-foreground/20 bg-muted">
+      <div
+        className="h-full bg-emerald-500 transition-[width] duration-500"
+        style={{ width: `${progress * 100}%` }}
+      />
+    </div>
+  )
+
+  if (compact) {
+    return <div className={className}>{bar}</div>
+  }
 
   return (
     <div className={cn("space-y-1", className)}>
@@ -33,12 +52,7 @@ export function ExperienceBar({ experience, className }: ExperienceBarProps) {
           {xpInLevel}/{xpForLevel} xp
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full border border-foreground/20 bg-muted">
-        <div
-          className="h-full bg-foreground transition-[width] duration-500"
-          style={{ width: `${progress * 100}%` }}
-        />
-      </div>
+      {bar}
     </div>
   )
 }
