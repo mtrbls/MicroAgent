@@ -2,6 +2,7 @@ import { Client } from "@mubit-ai/sdk"
 import type { Mate } from "./types"
 
 let cachedClient: Client | null = null
+const registered = new Set<string>()
 
 function getMubitClient(): Client | null {
   if (!process.env.MUBIT_API_KEY) return null
@@ -23,6 +24,8 @@ export async function registerMateOnMubit(
 ): Promise<void> {
   const client = getMubitClient()
   if (!client) return
+  if (registered.has(mate.id)) return
+  registered.add(mate.id)
   try {
     await client.registerAgent({
       agent_id: mate.id,
@@ -32,5 +35,6 @@ export async function registerMateOnMubit(
     })
   } catch (err) {
     console.error("[mubit] registerAgent failed:", err)
+    registered.delete(mate.id) // allow retry on next call
   }
 }

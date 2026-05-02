@@ -1,5 +1,6 @@
 import { sql, DEFAULT_USER_ID } from "@/db"
 import { DEFAULT_MATES } from "@/lib/default-mates"
+import { registerMateOnMubit } from "@/lib/mubit"
 import { NextResponse } from "next/server"
 
 export async function POST() {
@@ -64,6 +65,21 @@ export async function POST() {
           is_recruited = true
       `
     }
+
+    // Register starter pack on MuBit (idempotent in-runtime via internal
+    // Set; non-fatal if MUBIT_API_KEY isn't set or the call fails).
+    await Promise.all(
+      DEFAULT_MATES.map((m) =>
+        registerMateOnMubit({
+          id: m.id,
+          name: m.name,
+          archetype: m.archetype,
+          tagline: m.tagline,
+          tools: m.tools,
+          system_prompt_template: m.system_prompt_template,
+        })
+      )
+    )
 
     return NextResponse.json({
       success: true,
