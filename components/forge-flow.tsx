@@ -1,0 +1,193 @@
+"use client"
+
+import { useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { MateAvatar } from "./avatar"
+import { LevelBadge } from "./level-badge"
+import { Loader2, Sparkles, Check } from "lucide-react"
+import type { Mate } from "@/lib/types"
+
+interface ForgeFlowProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  initialDescription?: string
+  onComplete?: (mate: Mate) => void
+}
+
+export function ForgeFlow({ open, onOpenChange, initialDescription = "", onComplete }: ForgeFlowProps) {
+  const [description, setDescription] = useState(initialDescription)
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<Partial<Mate> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleForge = async () => {
+    if (!description.trim()) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch("/api/forge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to forge mate")
+      }
+
+      const data = await res.json()
+      setResult(data.mate)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAccept = () => {
+    if (result) {
+      onComplete?.(result as Mate)
+      onOpenChange(false)
+      // Reset state
+      setDescription("")
+      setResult(null)
+    }
+  }
+
+  const handleClose = () => {
+    onOpenChange(false)
+    setDescription(initialDescription)
+    setResult(null)
+    setError(null)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            Forge New Mate
+          </DialogTitle>
+        </DialogHeader>
+
+        {!result ? (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-foreground">
+                Describe your ideal mate
+              </label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g., An assistant that manages my GitHub notifications and summarizes important PRs..."
+                rows={4}
+                className="resize-none"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Be specific about what tasks they should handle and how they should communicate
+              </p>
+            </div>
+
+            {error && (
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button onClick={handleForge} disabled={loading || !description.trim()}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Forging...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Forge
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-start gap-4 rounded-lg border border-border bg-secondary/30 p-4">
+              <MateAvatar
+                shape={result.avatar_shape!}
+                color={result.color!}
+                size="lg"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground">{result.name}</h3>
+                  <LevelBadge level={1} />
+                </div>
+                <p className="text-sm capitalize text-muted-foreground">{result.archetype}</p>
+                <p className="mt-1 text-sm text-foreground/80">{result.tagline}</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <h4 className="mb-1 text-sm font-medium text-foreground">Voice</h4>
+                <p className="text-sm capitalize text-muted-foreground">
+                  {result.voice?.register}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {result.voice?.signature_phrases.map((phrase, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                    >
+                      {phrase}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-1 text-sm font-medium text-foreground">Tools</h4>
+                <div className="flex flex-wrap gap-1">
+                  {result.tools?.map((tool, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground"
+                    >
+                      {tool.mcp_server}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-1 text-sm font-medium text-foreground">Confidence Threshold</h4>
+                <p className="text-sm text-muted-foreground">
+                  {Math.round((result.confidence_threshold ?? 0.7) * 100)}%
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Button variant="outline" onClick={() => setResult(null)}>
+                Try Again
+              </Button>
+              <Button onClick={handleAccept}>
+                <Check className="mr-2 h-4 w-4" />
+                Accept & Recruit
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
