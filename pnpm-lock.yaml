@@ -23,6 +23,9 @@ importers:
       '@composio/core':
         specifier: ^0.8.1
         version: 0.8.1(zod@3.25.76)
+      '@composio/vercel':
+        specifier: ^0.8.1
+        version: 0.8.1(@composio/core@0.8.1(zod@3.25.76))(ai@6.0.174(zod@3.25.76))
       '@hookform/resolvers':
         specifier: ^3.9.1
         version: 3.10.0(react-hook-form@7.71.1(react@19.2.4))
@@ -261,6 +264,12 @@ packages:
     resolution: {integrity: sha512-d4V34itLrUWG/VBh7ciznKcxF/T22MBLHmuEzHoX0zsBOHsUmjYz5qtDh20S2p3FE+HHvLZxpXiv8yfdd4yI+Q==}
     peerDependencies:
       zod: '>=3.25.76 <5'
+
+  '@composio/vercel@0.8.1':
+    resolution: {integrity: sha512-avNSEtWzOIMeU/yhCqYZl001Axsm01kj5M2aPXbsNEdppHDKP1BgDnzKx3IaQE6sfNQgWRYyif6X7sSxcaY/fA==}
+    peerDependencies:
+      '@composio/core': 0.8.1
+      ai: ^5.0.0 || ^6.0.0
 
   '@date-fns/tz@1.4.1':
     resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
@@ -1985,6 +1994,11 @@ snapshots:
   '@composio/json-schema-to-zod@0.1.20(zod@3.25.76)':
     dependencies:
       zod: 3.25.76
+
+  '@composio/vercel@0.8.1(@composio/core@0.8.1(zod@3.25.76))(ai@6.0.174(zod@3.25.76))':
+    dependencies:
+      '@composio/core': 0.8.1(zod@3.25.76)
+      ai: 6.0.174(zod@3.25.76)
 
   '@date-fns/tz@1.4.1': {}
 

@@ -1,4 +1,5 @@
 import { Composio } from "@composio/core"
+import { VercelProvider } from "@composio/vercel"
 import type { Mate, MCPToolBinding } from "./types"
 
 // Map our internal tool names to Composio toolkit slugs
@@ -24,13 +25,18 @@ export function getToolkitsForMate(mate: Mate): string[] {
   return Array.from(toolkits)
 }
 
-// Create a Composio client
+// Create a Composio client with VercelProvider
 function getComposio() {
-  if (!process.env.COMPOSIO_API_KEY) {
+  const apiKey = process.env.COMPOSIO_API_KEY
+  if (!apiKey) {
     console.log("[v0] COMPOSIO_API_KEY not set")
     return null
   }
-  return new Composio()
+  return new Composio({ 
+    apiKey,
+    baseUrl: "https://backend.composio.dev",
+    provider: new VercelProvider() 
+  })
 }
 
 // Create a session for a user/mate and get tools
@@ -44,23 +50,18 @@ export async function getToolsForMate(mate: Mate, userId: string) {
   const entityId = `${userId}_${mate.id}`
 
   try {
-    // Create session - this is the v3 API entry point
     const session = await composio.create(entityId)
-    
-    // Get tools for the specific toolkits
     const tools = await session.tools({ toolkits })
     
     return { requiresAuth: false, authUrl: null, tools }
   } catch (error: unknown) {
-    console.error("[v0] Composio error:", error)
+    console.error("[v0] Composio getTools error:", error)
     
     // Check if this is an auth required error
     const errMsg = error instanceof Error ? error.message : String(error)
-    if (errMsg.includes("auth") || errMsg.includes("connect")) {
-      // Need to initiate auth flow
+    if (errMsg.includes("auth") || errMsg.includes("connect") || errMsg.includes("No connected account")) {
       try {
         const session = await composio.create(entityId)
-        // Get auth URL for the first toolkit that needs it
         const authUrl = await session.getAuthUrl(toolkits[0])
         return { requiresAuth: true, authUrl, tools: null }
       } catch (authError) {
@@ -88,7 +89,7 @@ export async function checkAuthStatus(mate: Mate, userId: string) {
     
     for (const toolkit of toolkits) {
       try {
-        // Try to get tools for this toolkit - if it works, we're connected
+        // Try to get tools - if it works, we're connected
         await session.tools({ toolkits: [toolkit] })
         connections[toolkit.toLowerCase()] = { connected: true }
       } catch {
