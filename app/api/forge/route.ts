@@ -1,6 +1,7 @@
 import { sql, DEFAULT_USER_ID } from "@/db"
 import { forgeFinalModel } from "@/lib/ai"
 import { TOOLKIT_MAP } from "@/lib/mcp"
+import { registerMateOnMubit } from "@/lib/mubit"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 import { NextResponse } from "next/server"
@@ -165,6 +166,18 @@ Create:
         true
       )
     `
+
+    // Register this mate as a MuBit agent so its memory/reflection loop is
+    // scoped per agent_id. Awaited so a registration failure shows up in
+    // logs, but errors are caught inside the helper to keep forge non-fatal.
+    await registerMateOnMubit({
+      id,
+      name,
+      archetype,
+      tagline,
+      tools,
+      system_prompt_template,
+    })
 
     return NextResponse.json({
       success: true,
