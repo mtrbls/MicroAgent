@@ -2,7 +2,7 @@
 
 import type { Mate } from "@/lib/types"
 import { MateAvatar } from "./avatar"
-import { LevelBadge } from "./level-badge"
+import { ExperienceBar } from "./experience-bar"
 import { Button } from "@/components/ui/button"
 import { Play } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -35,12 +35,9 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
           <div className="flex items-start gap-4">
             <MateAvatar name={mate.name} color={mate.color} size="lg" />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
-                  {mate.name}
-                </h3>
-                <LevelBadge level={mate.level} />
-              </div>
+              <h3 className="truncate text-lg font-semibold tracking-tight text-foreground">
+                {mate.name}
+              </h3>
               <p className="mt-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/80">
                 {mate.archetype}
               </p>
@@ -49,8 +46,9 @@ export function MateCard({ mate, onOpen, onLaunch, className }: MateCardProps) {
               </p>
             </div>
           </div>
+          <ExperienceBar experience={mate.experience ?? 0} className="mt-4" />
 
-          <div className="mt-5 flex items-center justify-between gap-2 border-t border-foreground/15 pt-4">
+          <div className="mt-4 flex items-center justify-between gap-2 border-t border-foreground/15 pt-4">
             <span className="text-xs text-muted-foreground">
               {mate.episode_count === 0
                 ? "Not run yet"

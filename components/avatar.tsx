@@ -10,24 +10,26 @@ interface MateAvatarProps {
 }
 
 const sizeClasses = {
-  sm: "h-8 w-8 text-xs",
-  md: "h-12 w-12 text-sm",
-  lg: "h-16 w-16 text-lg",
+  sm: "h-8 w-8",
+  md: "h-12 w-12",
+  lg: "h-16 w-16",
 }
 
 export function MateAvatar({ name, color, size = "md", className = "" }: MateAvatarProps) {
-  const initial = name.charAt(0).toUpperCase()
+  const seed = encodeURIComponent(name || "agent")
+  const bg = (color || "#cccccc").replace("#", "")
+  const src = `https://api.dicebear.com/9.x/pixel-art/svg?seed=${seed}&backgroundColor=${bg}`
 
   return (
-    <div
+    <img
+      src={src}
+      alt={name}
       className={cn(
-        "flex items-center justify-center rounded-full font-semibold text-white shadow-sm",
+        "shrink-0 rounded-md border-2 border-foreground",
         sizeClasses[size],
         className
       )}
-      style={{ backgroundColor: color }}
-    >
-      {initial}
-    </div>
+      loading="lazy"
+    />
   )
 }

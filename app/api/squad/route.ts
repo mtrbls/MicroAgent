@@ -30,6 +30,7 @@ function mapMate(row: Record<string, unknown>): Mate {
     tools: row.tools as Mate["tools"],
     confidence_threshold: row.confidence_threshold as number,
     level: row.level as number,
+    experience: (row.experience as number) ?? 0,
     episode_count: row.episode_count as number,
     status: row.status as Mate["status"],
     last_active: row.last_active as string,

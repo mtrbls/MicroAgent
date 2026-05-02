@@ -8,6 +8,8 @@ export async function POST() {
     // Lightweight schema migration: ensure the schedule column exists. Safe
     // to run on every seed (NO-OP if it already exists).
     await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS schedule JSONB`
+    // Experience points for the leveling system. +5 per feedback, 30 per level.
+    await sql`ALTER TABLE mates ADD COLUMN IF NOT EXISTS experience INTEGER NOT NULL DEFAULT 0`
 
     const newIds = new Set(DEFAULT_MATES.map((m) => m.id))
 

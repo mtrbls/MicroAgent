@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import type { Mate, Episode, Schedule, ScheduleCadence } from "@/lib/types"
 import { MateAvatar } from "./avatar"
-import { LevelBadge } from "./level-badge"
+import { ExperienceBar } from "./experience-bar"
 import { EpisodeLog } from "./episode-log"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -114,15 +114,13 @@ function MateDetailContent({ mate, onArchive }: MateDetailContentProps) {
         <div className="flex items-start gap-4">
           <MateAvatar name={mate.name} color={mate.color} size="lg" />
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <SheetTitle>{mate.name}</SheetTitle>
-              <LevelBadge level={mate.level} />
-            </div>
+            <SheetTitle>{mate.name}</SheetTitle>
             <p className="text-sm capitalize text-muted-foreground">{mate.archetype}</p>
             <p className="mt-1 text-sm text-foreground/80">{mate.tagline}</p>
           </div>
         </div>
       </SheetHeader>
+      <ExperienceBar experience={mate.experience ?? 0} className="mt-3" />
 
       <Tabs defaultValue="chat" className="mt-4 flex min-h-0 flex-1 flex-col">
         <TabsList className="w-full">

@@ -39,6 +39,7 @@ export type Mate = {
   tools: ToolBinding[]
   confidence_threshold: number
   level: number
+  experience: number
   episode_count: number
   status: MateStatus
   last_active: string
